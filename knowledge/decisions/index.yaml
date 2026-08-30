@@ -1,0 +1,7 @@
+# Maps decision topics to the active Decision Record.
+# Keep rationale in the referenced record, not in this file.
+current:
+  methodology.decision-record-naming: DR-004
+  methodology.decision-index: DR-002
+  methodology.template-size: DR-003
+

@@ -1,0 +1,11 @@
+{
+  "name": "knowledge-driven-engineering",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "knowledge:check": "node --experimental-strip-types tools/knowledge-check.ts",
+    "test": "node --test --experimental-strip-types tests/*.test.ts"
+  }
+}
+
