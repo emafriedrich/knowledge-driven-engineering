@@ -87,5 +87,5 @@ Indexes point to canonical documents. They do not copy rationale.
 - A contributor can start from a domain and find current canonical docs without scanning all artifacts.
 - A validator can detect duplicate IDs, invalid statuses, broken dependencies, and stale decision-index targets.
 - A validator can detect gate violations on agent-drafted documents and warn when a document is older than a dependency it relies on.
-- An agent can obtain the retrieval bundle for a code path from `knowledge:context` without navigating by inference.
+- An agent can obtain the retrieval bundle for a code path from `knowledge:context` without navigating by inference. The bundle also lists the domain's pending drafts, explicitly marked as not current truth, so in-flight analysis is discoverable before promotion.
 - A superseded Decision Record remains available as historical evidence.

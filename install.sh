@@ -158,7 +158,35 @@ fi
 
 # --- Claude Code hooks (optional layer; CI stays the hard guarantee) ---------
 if [ -e .claude/settings.json ]; then
-  skip ".claude/settings.json — merge the hooks from ${REPO_URL}/blob/main/.claude/settings.json manually"
+  # Merge the KDE hook entries into the existing settings without touching
+  # anything else. Idempotent: skips if the hook command is already wired.
+  if node -e '
+    const fs = require("fs");
+    const path = ".claude/settings.json";
+    const settings = JSON.parse(fs.readFileSync(path, "utf8"));
+    const command = "node --experimental-strip-types tools/knowledge-hook.mts";
+    settings.hooks ??= {};
+    let changed = false;
+    const ensure = (event, entry) => {
+      settings.hooks[event] ??= [];
+      if (JSON.stringify(settings.hooks[event]).includes(command)) return;
+      settings.hooks[event].push(entry);
+      changed = true;
+    };
+    ensure("PostToolUse", { matcher: "Edit|Write", hooks: [{ type: "command", command }] });
+    ensure("Stop", { hooks: [{ type: "command", command }] });
+    if (changed) fs.writeFileSync(path, JSON.stringify(settings, null, 2) + "\n");
+    process.exit(changed ? 0 : 3);
+  ' 2>/dev/null; then
+    add ".claude/settings.json KDE hooks merged (Claude Code will ask you to approve them once)"
+  else
+    status=$?
+    if [ "$status" -eq 3 ]; then
+      skip ".claude/settings.json KDE hooks"
+    else
+      say "  WARN  could not merge hooks into .claude/settings.json; add them manually from ${REPO_URL}/blob/main/.claude/settings.json"
+    fi
+  fi
 else
   mkdir -p .claude
   cp "$SRC/.claude/settings.json" .claude/settings.json
