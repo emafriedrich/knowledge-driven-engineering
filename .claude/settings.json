@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --experimental-strip-types tools/knowledge-hook.ts"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --experimental-strip-types tools/knowledge-hook.ts"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,8 +1,3 @@
-# Design System Component: <Name>
-
-<!-- Primary question: What reusable visual and interaction rules must UI implementations follow? -->
-
-```yaml
 ---
 id: DS-NNN
 title: <Name>
@@ -10,10 +5,16 @@ status: current
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 authors: [<name-or-team>]
-tags: []
+drafted_by: <human-or-agent>
+scope: [<domain>]
+tags: [design-system]
+depends_on: []
 related: []
 ---
-```
+
+# Design System Component: <Name>
+
+<!-- Primary question: What reusable visual and interaction rules must UI implementations follow? -->
 
 ## Purpose
 
@@ -30,4 +31,3 @@ related: []
 ## Accessibility
 
 <!-- Capture keyboard, semantics, labels, contrast, and focus behavior. -->
-

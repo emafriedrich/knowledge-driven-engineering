@@ -1,8 +1,3 @@
-# Information Architecture: <Title>
-
-<!-- Primary question: What information, screens, sections, concepts, and hierarchy exist in the product? -->
-
-```yaml
 ---
 id: IA-NNN
 title: <Title>
@@ -10,10 +5,16 @@ status: current
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 authors: [<name-or-team>]
-tags: []
+drafted_by: <human-or-agent>
+scope: [<domain>]
+tags: [ia]
+depends_on: []
 related: []
 ---
-```
+
+# Information Architecture: <Title>
+
+<!-- Primary question: What information, screens, sections, concepts, and hierarchy exist in the product? -->
 
 ## Concepts
 
@@ -26,4 +27,3 @@ related: []
 ## Exclusions
 
 <!-- Name visual styling or behavior details that belong elsewhere. -->
-

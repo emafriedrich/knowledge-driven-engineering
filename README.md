@@ -1,105 +1,127 @@
 # Knowledge-Driven Engineering
 
-Knowledge-Driven Engineering is a lightweight way to keep product, design, architecture, and implementation knowledge explicit.
+Knowledge-Driven Engineering is a lightweight engineering knowledge system for teams that mix humans and AI agents.
 
-The core thesis:
+Its goal is reducing engineering mistakes while minimizing cognitive load. Documentation is one representation of the knowledge; the product is the retrieval system that helps engineers and agents find the right context before changing behavior.
 
-> Code is one representation of system knowledge. Product intent, design constraints, architectural decisions, and engineering rules should also be versioned, traceable, and readable by humans and AI agents.
+## Core Thesis
 
-This repository defines the V0 methodology, templates, examples, and a small validator. It starts private so the method can be tested in a real product before anyone optimizes it for public adoption.
+Code represents part of system knowledge. Product intent, design constraints, architecture, behavior rules, operational lessons, and tradeoffs also need versioned, traceable, retrievable representations.
 
 ## Problem
 
-Software teams lose time when important knowledge lives only in code, chats, tickets, or memory. Agents lose more time because they cannot ask the original decision-makers what happened. They infer intent from implementation, rediscover context, and risk changing behavior that exists for a reason.
+Teams lose context when decisions live in code, chats, issue comments, or memory. A Staff Engineer joining after six months has to reconstruct intent. An implementation agent has to infer product rules from implementation.
 
-Knowledge-Driven Engineering addresses that failure mode by separating:
+Knowledge-Driven Engineering reduces that cost by separating:
 
-- proposals from decisions,
+- discussion from decisions,
 - historical decisions from current truth,
-- behavior specifications from implementation tasks,
-- visual rules from product information architecture.
-
-The method favors small documents with clear boundaries over large documents that mix discussion, decisions, specs, and task lists.
+- behavior requirements from implementation tasks,
+- information architecture from visual design rules.
 
 ## When To Use It
 
-Use this method when a project has enough product or technical surface area that future contributors will need context before changing behavior. It fits teams using AI-assisted engineering, systems with complex business rules, and products where design, product, and engineering decisions interact.
+Use this method when a project has enough product or technical surface area that contributors need context before changing behavior. It fits products with business rules, cross-functional design/engineering tradeoffs, or AI-assisted implementation.
 
-It is overkill for throwaway prototypes, single-purpose scripts, and projects where code comments explain all meaningful behavior.
+Skip it for throwaway prototypes, single-purpose scripts, and codebases where local code comments explain the meaningful behavior.
 
-## Artifact Types
+To use the method in your own project, see [ADOPTING.md](ADOPTING.md).
 
-| Artifact | Primary question | Role |
-| --- | --- | --- |
-| Product Vision | What are we building, for whom, and why? | Long-lived product context. |
-| RFC | What significant change are we proposing? | Proposal, tradeoffs, open questions. |
-| Decision Record | What important decision did we make and why? | Historical record for product, UX, design, architecture, security, infrastructure, and business rules. |
-| Specification | What behavior and constraints must implementation satisfy? | Current expected behavior after decisions have been made. |
-| User Flow | How does a user move through a capability? | Step-by-step product experience, often with Mermaid. |
-| Information Architecture | What concepts, screens, and hierarchy exist? | Product structure separate from visual styling. |
-| Design System | What reusable visual and interaction rules apply? | UI implementation constraints. |
-| Task | What bounded implementation work needs completion? | Execution unit derived from canonical knowledge. |
-| Prompt / Agent Context | What scoped context should an AI agent receive? | Operational instructions that reference canonical knowledge. |
+## Prior Art And Delta
 
-## Information Flow
+The pieces are deliberately familiar: Decision Records (Nygard's ADRs), RFC processes, spec-driven development, the AGENTS.md convention, and domain partitioning from DDD. Knowledge-Driven Engineering is an operational synthesis of that prior art for teams where agents implement, and its delta is the parts that tradition leaves out:
+
+- **A computable projection of current truth.** ADRs solve history; the decision indexes answer "which decisions apply today?" in a form a machine consumes.
+- **Explicit precedence between sources**, plus the rule to report conflicts instead of resolving them silently. Spec-driven development says to write specs; it does not say what wins when spec, decision, and code disagree.
+- **Consumption rules for agents**: a bounded retrieval order instead of "read the docs".
+- **Knowledge integrity as CI.** The validator lints the knowledge graph the way code is linted.
+
+The substrate itself — markdown files with YAML frontmatter, linked into a graph, versioned in git, consumable by agents — is shared with the [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf) (Google Cloud, 2026), which validates the pattern for describing data resources. OKF is deliberately minimally opinionated; Knowledge-Driven Engineering operates the layer OKF leaves out: lifecycle, current truth, precedence, and governance of agent-authored knowledge.
+
+## Conceptual Model
+
+The primary organizing unit is the domain: a product area, system area, or methodology area where people perform work.
+
+Inside a domain, artifacts keep different responsibilities:
+
+| Artifact | Primary question |
+| --- | --- |
+| Product Vision | What are we building and why? |
+| RFC | What significant change are we proposing? |
+| Decision Record | What important decision did we make? |
+| Specification | What behavior must implementation satisfy? |
+| User Flow | How does a user move through a capability? |
+| Information Architecture | What information exists and where does it live? |
+| Design System | What reusable visual rules exist? |
+| Task | What bounded implementation work remains? |
+| Prompt / Agent Context | What context should an AI agent receive? |
+
+Domains optimize retrieval. Artifact types protect meaning.
+
+## Knowledge Flow
 
 ```mermaid
 flowchart TD
-    Vision[Product Vision] --> RFC[RFC]
-    RFC --> DR[Decision Record]
-    DR --> Spec[Specification]
-    DR --> IA[Information Architecture]
-    DR --> Flow[User Flow]
-    IA --> Spec
-    Flow --> Spec
-    Spec --> Task[Task]
-    DesignSystem[Design System] --> Task
-    AgentContext[Prompt / Agent Context] --> Task
-    DR --> DecisionIndex[Decision Index]
-    DecisionIndex --> AgentContext
-```
-
-The Decision Record keeps rationale. The decision index only points to active decisions.
-
-## Example Lifecycle
-
-```mermaid
-flowchart LR
-    Idea[Idea] --> DraftRFC[Draft RFC]
-    DraftRFC --> Review[In Review]
-    Review --> Accepted[Accepted RFC]
-    Accepted --> Decision[Decision Record]
+    Idea[Idea] --> RFC[RFC]
+    RFC --> Review[Review]
+    Review --> Accepted{Accepted?}
+    Accepted -->|No| Archive[Rejected or archived RFC]
+    Accepted -->|Yes| Decision[Decision Record]
     Decision --> Spec[Specification]
-    Spec --> Task[Implementation Task]
-    Task --> Code[Code Change]
-    Code --> Verify[Validation]
-    Verify --> Implemented[Mark RFC Implemented]
+    Decision --> IA[Information Architecture]
+    Decision --> Flow[User Flow]
+    Spec --> Task[Task]
+    IA --> Task
+    Flow --> Task
+    Task --> Implementation[Implementation]
+    Implementation --> Validation[Validation]
+    Validation --> Learning[Operational learning]
+    Learning --> ChangeNeeded{Change needed?}
+    ChangeNeeded -->|Yes| RFC
+    ChangeNeeded -->|No| Current[Keep current knowledge]
 ```
 
-A team might propose that food categories should appear before restaurants on a storefront. They write an RFC to explore the change, accept a Decision Record after review, update the information architecture and UX flow, write a specification, then create implementation tasks.
+## Current Truth
 
-See [examples/food-delivery](examples/food-delivery/README.md).
+Decision Records preserve history. Domain indexes project current truth.
+
+- `knowledge/index.yaml` tells a reader which domains exist and which current artifacts anchor each domain.
+- `knowledge/<domain>/decisions/index.yaml` maps decision topics to active Decision Records.
+
+Indexes point to canonical records. They do not copy rationale.
 
 ## Repository Layout
 
 ```text
 .
 +-- AGENTS.md
++-- ADOPTING.md
 +-- HANDBOOK.md
 +-- CONTRIBUTING.md
++-- REVIEW.md
 +-- knowledge/
-|   +-- decisions/
-|   +-- design/
-|   +-- engineering/
-|   +-- product/
-+-- prompts/
+|   +-- index.yaml
+|   +-- methodology/
+|       +-- product-vision.md
+|       +-- decisions/
+|       +-- specs/
+|       +-- flows/
+|       +-- prompts/
 +-- templates/
 +-- examples/
 +-- tools/
 +-- tests/
 ```
 
-The structure stays shallow on purpose. Add directories only when they improve discovery.
+The structure is domain-first and shallow. Add domains when work needs a stable retrieval boundary. Add artifact folders inside a domain only when that artifact type exists.
+
+## Example
+
+The food-delivery example shows a storefront feature:
+
+> Food categories should appear before restaurants.
+
+See [examples/food-delivery](examples/food-delivery/README.md).
 
 ## Validation
 
@@ -109,4 +131,16 @@ Run:
 npm run knowledge:check
 ```
 
-The V0 validator checks IDs, statuses, cross-references, supersession metadata, and decision index targets.
+The validator checks duplicate IDs, invalid statuses and dates, broken references, broken dependencies, supersession links, missing scopes, and stale decision-index targets. It also enforces that every knowledge document has parseable frontmatter and exactly one artifact type tag, that `scope` values are domains declared in the catalog, and it warns when a current-truth document is not referenced by any index or document.
+
+Since DR-007 and DR-008 the validator also enforces promotion gates on agent-drafted documents (an agent proposes, a human promotes), requires behavior documents entering current truth to be anchored to an active decision, and warns when a document is older than a dependency it relies on.
+
+Two companion tools:
+
+```bash
+npm run knowledge:context -- <file-or-domain>   # retrieval bundle / context receipt
+node --experimental-strip-types tools/drift-gate.ts  # PR drift gate (runs in CI)
+```
+
+CI runs the validator and the test suite on every push and pull request, plus the drift gate on pull requests: code changes mapped to a domain with a current spec must touch that domain's knowledge or declare `no-behavior-change` in the PR body.
+

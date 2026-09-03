@@ -1,8 +1,3 @@
-# SPEC-NNN: <Title>
-
-<!-- Primary question: What behavior and constraints must the implementation satisfy? -->
-
-```yaml
 ---
 id: SPEC-NNN
 title: <Title>
@@ -10,10 +5,16 @@ status: current
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 authors: [<name-or-team>]
-tags: []
+drafted_by: <human-or-agent>
+scope: [<domain>]
+tags: [spec]
+depends_on: []
 related: []
 ---
-```
+
+# SPEC-NNN: <Title>
+
+<!-- Primary question: What behavior and constraints must the implementation satisfy? -->
 
 ## Scope
 
@@ -30,4 +31,3 @@ related: []
 ## Acceptance Checks
 
 <!-- List observable checks an implementation agent or reviewer can run. -->
-

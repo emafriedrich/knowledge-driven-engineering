@@ -1,0 +1,11 @@
+# Example domain catalog.
+domains:
+  storefront:
+    path: examples/food-delivery/knowledge/storefront
+    description: Customer-facing restaurant and category discovery.
+    decision_index: examples/food-delivery/knowledge/storefront/decisions/index.yaml
+    current:
+      product_vision: FD-PV-001
+      information_architecture: FD-IA-001
+      user_flow: FD-FLOW-001
+      specification: FD-SPEC-001

@@ -1,16 +1,18 @@
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { basename, dirname, join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { parse as parseYaml } from 'yaml';
 
-type FrontmatterValue = string | string[];
+type Frontmatter = Record<string, unknown>;
 
 type DocumentRecord = {
   file: string;
-  data: Record<string, FrontmatterValue>;
+  data: Frontmatter;
 };
 
 export type CheckResult = {
   errors: string[];
+  warnings: string[];
   documents: DocumentRecord[];
 };
 
@@ -26,13 +28,23 @@ const VALID_STATUSES = new Set([
 ]);
 
 const ACTIVE_DECISION_STATUSES = new Set(['accepted', 'implemented']);
-const REFERENCE_FIELDS = ['related', 'supersedes', 'superseded_by'];
+// Statuses that make a document part of current truth (and therefore worth anchoring in an index).
+const CURRENT_TRUTH_STATUSES = new Set(['accepted', 'implemented', 'current']);
+const REFERENCE_FIELDS = ['related', 'depends_on', 'supersedes', 'superseded_by'];
+const REQUIRED_FIELDS = ['id', 'title', 'status', 'created', 'updated', 'authors', 'scope', 'tags', 'depends_on', 'related'];
+// Every document must carry exactly one artifact type tag. The type drives
+// validation rules; ID patterns are not a reliable type signal.
+const TYPE_TAGS = new Set(['vision', 'rfc', 'decision', 'spec', 'flow', 'ia', 'design-system', 'prompt', 'task', 'playbook']);
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+// Gate 6 (DR-007): agent drafts older than this are reported for archiving.
+const AGENT_DRAFT_EXPIRY_DAYS = 30;
+const SKIPPED_DIRECTORIES = new Set(['.git', 'node_modules', '.serena', 'coverage']);
 
 function walk(root: string): string[] {
   const results: string[] = [];
 
   for (const entry of readdirSync(root)) {
-    if (entry === '.git' || entry === 'node_modules' || entry === '.serena') continue;
+    if (SKIPPED_DIRECTORIES.has(entry)) continue;
 
     const fullPath = join(root, entry);
     const stats = statSync(fullPath);
@@ -48,71 +60,125 @@ function walk(root: string): string[] {
   return results;
 }
 
-function parseList(value: string): string[] {
-  const trimmed = value.trim();
-  if (!trimmed || trimmed === '[]') return [];
-  if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) return [cleanScalar(trimmed)];
+function parseFrontmatter(content: string): Frontmatter | null {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(content);
+  if (!match) return null;
 
-  return trimmed
-    .slice(1, -1)
-    .split(',')
-    .map((item) => cleanScalar(item.trim()))
-    .filter(Boolean);
-}
-
-function cleanScalar(value: string): string {
-  return value.replace(/^['"]|['"]$/g, '').trim();
-}
-
-function parseFrontmatter(content: string): Record<string, FrontmatterValue> | null {
-  if (!content.startsWith('---\n')) return null;
-
-  const end = content.indexOf('\n---', 4);
-  if (end === -1) return null;
-
-  const raw = content.slice(4, end).trim();
-  const data: Record<string, FrontmatterValue> = {};
-
-  for (const line of raw.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-
-    const match = /^([A-Za-z0-9_-]+):\s*(.*)$/.exec(trimmed);
-    if (!match) continue;
-
-    const [, key, value] = match;
-    data[key] = value.trim().startsWith('[') ? parseList(value) : cleanScalar(value);
+  let data: unknown;
+  try {
+    data = parseYaml(match[1]);
+  } catch {
+    return null;
   }
 
-  return data;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+  return data as Frontmatter;
 }
 
-function values(data: Record<string, FrontmatterValue>, field: string): string[] {
+export function values(data: Frontmatter, field: string): string[] {
   const value = data[field];
-  if (!value) return [];
-  return Array.isArray(value) ? value : [value];
+  if (value === null || value === undefined) return [];
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+  if (typeof value === 'object') return [];
+
+  const scalar = String(value).trim();
+  return scalar ? [scalar] : [];
 }
 
-function parseDecisionIndex(file: string): Record<string, string> {
-  const content = readFileSync(file, 'utf8');
+export function documentType(data: Frontmatter): string | null {
+  const typeTags = values(data, 'tags').filter((tag) => TYPE_TAGS.has(tag));
+  return typeTags.length === 1 ? typeTags[0] : null;
+}
+
+function pathSegments(root: string, file: string): string[] {
+  return relative(root, file).split(/[\\/]/);
+}
+
+function isKnowledgeDocumentPath(root: string, file: string): boolean {
+  if (!file.endsWith('.md')) return false;
+  if (basename(file) === 'README.md') return false;
+
+  const segments = pathSegments(root, file);
+  return segments.includes('knowledge') && segments[0] !== 'templates';
+}
+
+export type CatalogDomain = {
+  path?: string;
+  decisionIndex?: string;
+  codePaths: string[];
+  current: Record<string, string>;
+};
+
+export type Catalog = {
+  file: string;
+  rootDir: string;
+  domains: Map<string, CatalogDomain>;
+};
+
+export function loadCatalogs(root = process.cwd()): Catalog[] {
+  return walk(root)
+    .filter((file) => relative(root, file).replace(/\\/g, '/').endsWith('knowledge/index.yaml'))
+    .map((file) => parseCatalog(file))
+    .filter((catalog): catalog is Catalog => catalog !== null);
+}
+
+function parseCatalog(file: string): Catalog | null {
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+
+  if (!parsed || typeof parsed !== 'object') return null;
+
+  const domains = new Map<string, CatalogDomain>();
+  const rawDomains = (parsed as Record<string, unknown>).domains;
+
+  if (rawDomains && typeof rawDomains === 'object' && !Array.isArray(rawDomains)) {
+    for (const [name, rawDomain] of Object.entries(rawDomains as Record<string, unknown>)) {
+      const domain: CatalogDomain = { current: {}, codePaths: [] };
+
+      if (rawDomain && typeof rawDomain === 'object' && !Array.isArray(rawDomain)) {
+        const entry = rawDomain as Record<string, unknown>;
+        if (typeof entry.path === 'string') domain.path = entry.path;
+        if (typeof entry.decision_index === 'string') domain.decisionIndex = entry.decision_index;
+        for (const codePath of Array.isArray(entry.code_paths) ? entry.code_paths : []) {
+          if (typeof codePath === 'string') domain.codePaths.push(codePath);
+        }
+
+        const current = entry.current;
+        if (current && typeof current === 'object' && !Array.isArray(current)) {
+          for (const [role, id] of Object.entries(current as Record<string, unknown>)) {
+            if (typeof id === 'string' || typeof id === 'number') domain.current[role] = String(id);
+          }
+        }
+      }
+
+      domains.set(name, domain);
+    }
+  }
+
+  return { file, rootDir: dirname(file), domains };
+}
+
+export function parseDecisionIndex(file: string): Record<string, string> | null {
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+
+  if (!parsed || typeof parsed !== 'object') return null;
+
   const current: Record<string, string> = {};
-  let inCurrent = false;
+  const rawCurrent = (parsed as Record<string, unknown>).current;
 
-  for (const line of content.split('\n')) {
-    if (/^current:\s*$/.test(line)) {
-      inCurrent = true;
-      continue;
+  if (rawCurrent && typeof rawCurrent === 'object' && !Array.isArray(rawCurrent)) {
+    for (const [topic, id] of Object.entries(rawCurrent as Record<string, unknown>)) {
+      if (typeof id === 'string' || typeof id === 'number') current[topic] = String(id);
     }
-
-    if (/^[A-Za-z0-9_-]+:\s*$/.test(line)) {
-      inCurrent = false;
-      continue;
-    }
-
-    if (!inCurrent) continue;
-
-    const match = /^  ([A-Za-z0-9_.-]+):\s*([A-Za-z0-9_.-]+)\s*$/.exec(line);
-    if (match) current[match[1]] = match[2];
   }
 
   return current;
@@ -131,15 +197,25 @@ function resolveReference(root: string, sourceFile: string, reference: string, i
 
 export function checkKnowledge(root = process.cwd()): CheckResult {
   const errors: string[] = [];
+  const warnings: string[] = [];
   const files = walk(root);
   const markdownFiles = files.filter((file) => file.endsWith('.md') && !relative(root, file).startsWith('templates/'));
-  const indexFiles = files.filter((file) => file.endsWith('decisions/index.yaml'));
+  const decisionIndexFiles = files.filter((file) => relative(root, file).replace(/\\/g, '/').endsWith('decisions/index.yaml'));
+  const catalogFiles = files.filter((file) => relative(root, file).replace(/\\/g, '/').endsWith('knowledge/index.yaml'));
   const documents: DocumentRecord[] = [];
   const ids = new Map<string, DocumentRecord>();
 
   for (const file of markdownFiles) {
     const data = parseFrontmatter(readFileSync(file, 'utf8'));
-    if (!data) continue;
+
+    if (!data) {
+      // A knowledge document the parser cannot see is a silent integrity hole:
+      // it would skip every check below while looking valid to a reader.
+      if (isKnowledgeDocumentPath(root, file)) {
+        errors.push(`${relative(root, file)} is a knowledge document without valid frontmatter at the top of the file`);
+      }
+      continue;
+    }
 
     const document = { file, data };
     documents.push(document);
@@ -160,6 +236,29 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
     if (typeof status !== 'string' || !VALID_STATUSES.has(status)) {
       errors.push(`${relative(root, file)} has invalid status ${String(status)}`);
     }
+
+    for (const field of REQUIRED_FIELDS) {
+      if (!(field in data)) {
+        errors.push(`${relative(root, file)} is missing required field ${field}`);
+      }
+    }
+
+    for (const field of ['created', 'updated']) {
+      if (field in data && !DATE_PATTERN.test(values(data, field)[0] ?? '')) {
+        errors.push(`${relative(root, file)} has invalid ${field} date (expected YYYY-MM-DD)`);
+      }
+    }
+
+    if (values(data, 'scope').length === 0) {
+      errors.push(`${relative(root, file)} has empty scope`);
+    }
+
+    const typeTags = values(data, 'tags').filter((tag) => TYPE_TAGS.has(tag));
+    if (typeTags.length === 0) {
+      errors.push(`${relative(root, file)} has no artifact type tag (expected one of: ${[...TYPE_TAGS].join(', ')})`);
+    } else if (typeTags.length > 1) {
+      errors.push(`${relative(root, file)} has multiple artifact type tags (${typeTags.join(', ')})`);
+    }
   }
 
   for (const document of documents) {
@@ -174,7 +273,7 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
     }
 
     const status = document.data.status;
-    if (id.includes('DR-') && status === 'superseded' && values(document.data, 'superseded_by').length === 0) {
+    if (documentType(document.data) === 'decision' && status === 'superseded' && values(document.data, 'superseded_by').length === 0) {
       errors.push(`${relative(root, document.file)} is superseded but has no superseded_by target`);
     }
 
@@ -188,10 +287,88 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
     }
   }
 
-  for (const file of indexFiles) {
+  // Gates on agent-authored knowledge (DR-007) and drift checks (DR-008).
+  const now = Date.now();
+
+  for (const document of documents) {
+    const data = document.data;
+    const file = relative(root, document.file);
+    const draftedBy = values(data, 'drafted_by')[0];
+    const status = String(data.status);
+    const type = documentType(data);
+
+    if (draftedBy && draftedBy !== 'human' && draftedBy !== 'agent') {
+      errors.push(`${file} has invalid drafted_by ${draftedBy} (expected human or agent)`);
+    }
+
+    const agentDrafted = draftedBy === 'agent';
+
+    if (agentDrafted && type === 'rfc' && values(data, 'motivated_by').length === 0) {
+      errors.push(`${file} is an agent-drafted RFC without motivated_by`);
+    }
+
+    if (agentDrafted && CURRENT_TRUTH_STATUSES.has(status) && values(data, 'approved_by').length === 0) {
+      errors.push(`${file} is agent-drafted with status ${status} but has empty approved_by`);
+    }
+
+    if (CURRENT_TRUTH_STATUSES.has(status) && (type === 'spec' || type === 'flow' || type === 'ia')) {
+      const anchored = values(data, 'depends_on').some((reference) => {
+        const anchor = ids.get(reference);
+        if (!anchor) return false;
+
+        const anchorType = documentType(anchor.data);
+        const anchorStatus = String(anchor.data.status);
+        if (anchorType === 'decision' && ACTIVE_DECISION_STATUSES.has(anchorStatus)) return true;
+        // Flows and IA may hang off a current spec instead of a decision.
+        return type !== 'spec' && anchorType === 'spec' && CURRENT_TRUTH_STATUSES.has(anchorStatus);
+      });
+
+      if (!anchored) {
+        const expected = type === 'spec' ? 'an active decision' : 'an active decision or current spec';
+        errors.push(`${file} has status ${status} but does not depend on ${expected}`);
+      }
+    }
+
+    const updated = values(data, 'updated')[0] ?? '';
+
+    for (const reference of values(data, 'depends_on')) {
+      const dependency = ids.get(reference);
+      if (!dependency) continue;
+
+      const dependencyUpdated = values(dependency.data, 'updated')[0] ?? '';
+      if (DATE_PATTERN.test(updated) && dependencyUpdated > updated) {
+        warnings.push(`${file} may be stale: depends_on ${reference} was updated ${dependencyUpdated}, after this document (${updated})`);
+      }
+    }
+
+    if (agentDrafted && (status === 'draft' || status === 'in-review') && DATE_PATTERN.test(updated)) {
+      const ageDays = Math.floor((now - new Date(`${updated}T00:00:00Z`).getTime()) / 86_400_000);
+      if (ageDays > AGENT_DRAFT_EXPIRY_DAYS) {
+        warnings.push(`${file} is an agent draft with no update in ${ageDays} days; review or archive it`);
+      }
+    }
+  }
+
+  const referencedIds = new Set<string>();
+
+  for (const document of documents) {
+    for (const field of REFERENCE_FIELDS) {
+      for (const reference of values(document.data, field)) {
+        referencedIds.add(reference);
+      }
+    }
+  }
+
+  for (const file of decisionIndexFiles) {
     const current = parseDecisionIndex(file);
 
+    if (!current) {
+      errors.push(`${relative(root, file)} is not a valid decision index`);
+      continue;
+    }
+
     for (const [topic, decisionId] of Object.entries(current)) {
+      referencedIds.add(decisionId);
       const record = ids.get(decisionId);
 
       if (!record) {
@@ -199,7 +376,7 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
         continue;
       }
 
-      if (!String(record.data.id).includes('DR-')) {
+      if (documentType(record.data) !== 'decision') {
         errors.push(`${relative(root, file)} topic ${topic} points to non-decision ${decisionId}`);
       }
 
@@ -210,18 +387,89 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
     }
   }
 
-  return { errors, documents };
-}
+  const catalogs: Catalog[] = [];
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const result = checkKnowledge(process.cwd());
+  for (const file of catalogFiles) {
+    const catalog = parseCatalog(file);
 
-  if (result.errors.length > 0) {
-    for (const error of result.errors) {
-      console.error(`knowledge: ${error}`);
+    if (!catalog) {
+      errors.push(`${relative(root, file)} is not a valid domain catalog`);
+      continue;
     }
-    process.exit(1);
+
+    catalogs.push(catalog);
+
+    for (const [domainName, domain] of catalog.domains) {
+      for (const path of [domain.path, domain.decisionIndex]) {
+        if (path && !existsSync(join(root, path))) {
+          errors.push(`${relative(root, file)} points to missing path ${path}`);
+        }
+      }
+
+      for (const [role, anchorId] of Object.entries(domain.current)) {
+        referencedIds.add(anchorId);
+        const record = ids.get(anchorId);
+
+        if (!record) {
+          errors.push(`${relative(root, file)} points to missing document ${anchorId}`);
+          continue;
+        }
+
+        const status = String(record.data.status);
+        if (!CURRENT_TRUTH_STATUSES.has(status)) {
+          errors.push(`${relative(root, file)} domain ${domainName} anchor ${role} points to non-current document ${anchorId} with status ${status}`);
+        }
+      }
+    }
   }
 
-  console.log(`knowledge: ok (${result.documents.length} documents checked)`);
+  // Scope values must be domains declared in the governing catalog. Undeclared
+  // scopes are how near-duplicate domains (restaurant/restaurants) creep in.
+  for (const document of documents) {
+    const catalog = catalogs
+      .filter((candidate) => document.file.startsWith(candidate.rootDir + '/'))
+      .sort((a, b) => b.rootDir.length - a.rootDir.length)[0];
+
+    if (!catalog) continue;
+
+    for (const scope of values(document.data, 'scope')) {
+      if (!catalog.domains.has(scope)) {
+        errors.push(`${relative(root, document.file)} has scope value ${scope} that is not a domain in ${relative(root, catalog.file)}`);
+      }
+    }
+  }
+
+  // Current-truth documents that no index or document references are invisible
+  // to the retrieval paths this method defines.
+  for (const document of documents) {
+    const id = String(document.data.id ?? '');
+    const status = String(document.data.status);
+    if (!id || !CURRENT_TRUTH_STATUSES.has(status)) continue;
+
+    if (!referencedIds.has(id)) {
+      warnings.push(`${relative(root, document.file)} (${id}) is current truth but is not referenced by any index or document`);
+    }
+  }
+
+  return { errors, warnings, documents };
+}
+
+const executedDirectly = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (executedDirectly) {
+  const { errors, warnings, documents } = checkKnowledge();
+
+  for (const warning of warnings) {
+    console.warn(`warning: ${warning}`);
+  }
+
+  if (errors.length > 0) {
+    for (const error of errors) {
+      console.error(error);
+    }
+    process.exitCode = 1;
+  } else {
+    const warningSuffix = warnings.length > 0 ? `, ${warnings.length} warning${warnings.length === 1 ? '' : 's'}` : '';
+    console.log(`knowledge: ok (${documents.length} documents checked${warningSuffix})`);
+  }
 }

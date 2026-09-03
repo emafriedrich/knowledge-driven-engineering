@@ -1,15 +1,27 @@
 # Knowledge
 
-The `knowledge/` directory stores canonical project knowledge.
+This directory stores canonical knowledge by domain.
 
-Use this directory for current methodology artifacts and project-level knowledge that should outlive a single task. Keep examples in `examples/`.
+A domain is a product area, system area, or methodology area where people perform work and need local context. Domain-first organization keeps retrieval close to the task.
 
-## Layout
+## Entry Points
 
-- `product/` stores product vision, personas, positioning, and durable product context.
-- `decisions/` stores Decision Records, RFCs, and the current decision index.
-- `design/` stores IA, user flows, and design-system guidance.
-- `engineering/` stores architecture notes, specs, and playbooks.
+- `index.yaml` catalogs domains and current anchor artifacts.
+- `<domain>/README.md` explains how to retrieve knowledge for that domain.
+- `<domain>/decisions/index.yaml` maps active decision topics to current Decision Records.
 
-Add subdirectories only when they improve discovery for humans and agents.
+## Artifact Folders
+
+Create artifact folders inside a domain only when the domain has real content of that type:
+
+- `rfcs/`
+- `decisions/`
+- `specs/`
+- `flows/`
+- `ia/`
+- `design-system/`
+- `prompts/`
+- `tasks/`
+
+Avoid global artifact folders for canonical project knowledge. They make retrieval start from document type instead of the work area.
 
