@@ -1,8 +1,3 @@
-# DR-NNN: <Title>
-
-<!-- Primary question: What important decision did we make and why? -->
-
-```yaml
 ---
 id: DR-NNN
 title: <Title>
@@ -10,12 +5,18 @@ status: accepted
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 authors: [<name-or-team>]
-tags: []
+drafted_by: <human-or-agent>
+scope: [<domain>]
+tags: [decision]
+depends_on: []
 related: []
 supersedes: []
 superseded_by: []
 ---
-```
+
+# DR-NNN: <Title>
+
+<!-- Primary question: What important decision did we make and why? -->
 
 ## Context
 
@@ -32,4 +33,3 @@ superseded_by: []
 ## Supersession
 
 <!-- If this replaces another decision, link it here and update the old record. -->
-

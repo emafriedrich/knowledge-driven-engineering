@@ -1,214 +1,232 @@
 # Knowledge-Driven Engineering Handbook
 
-This handbook is the canonical guide for the methodology.
+This handbook defines the methodology.
 
-## Principles
+## Product Standard
 
-- Each artifact answers one primary question.
-- Historical records stay intact.
-- Current truth must be cheap to find.
-- Agents should retrieve scoped context for the task in front of them.
-- Documentation should change when it prevents rediscovery, wrong implementation, or repeated debate.
-- A small accurate document beats a complete stale document.
+Treat the repository as an engineering knowledge product. Its users need to make correct changes with less rediscovery.
+
+An artifact earns its place when it helps a human or agent:
+
+- avoid a wrong change,
+- find current canonical context,
+- trace a decision to implementation,
+- know which knowledge to review after a change.
+
+## Organizing Model
+
+Organize canonical knowledge by domain first, then by artifact type.
+
+A domain can be a product area such as `storefront`, a system area such as `payments`, or the methodology itself. Work usually starts from a domain, so retrieval should start there too.
+
+Use this shape:
+
+```text
+knowledge/
++-- index.yaml
++-- <domain>/
+    +-- README.md
+    +-- product-vision.md
+    +-- decisions/
+    |   +-- index.yaml
+    +-- rfcs/
+    +-- specs/
+    +-- flows/
+    +-- ia/
+    +-- design-system/
+    +-- prompts/
+```
+
+Do not create empty artifact folders. Add them when the domain has real knowledge of that type.
 
 ## Artifact Responsibilities
 
 ### Product Vision
 
-Answers: What are we building, for whom, and why?
+Answers: What are we building and why?
 
-Use a Product Vision when a team needs durable product context. Keep it strategic. Do not use it for feature-level behavior, task planning, or design details.
+Use it for durable product direction. Keep feature behavior in specs.
 
 ### RFC
 
 Answers: What significant change are we proposing?
 
-Create an RFC for changes that need discussion, involve tradeoffs, affect multiple artifacts, or may change product behavior. RFCs hold proposal context, alternatives, risks, and open questions.
+Use it for changes that need discussion, tradeoff analysis, or cross-domain review. RFCs are discussion artifacts. Do not use them as permanent behavior definitions after the team decides.
 
-Typical statuses:
-
-- `draft`
-- `in-review`
-- `accepted`
-- `rejected`
-- `implemented`
-- `archived`
-
-An accepted RFC may produce Decision Records, specs, UX flows, IA updates, design-system changes, and tasks.
+Statuses: `draft`, `in-review`, `accepted`, `rejected`, `implemented`, `archived`.
 
 ### Decision Record
 
-Answers: What important decision did we make and why?
+Answers: What important decision did we make?
 
-Use `Decision Record` as the canonical term. `ADR` remains acceptable when teams already use that phrase, but this methodology records more than architecture.
+Use Decision Records for architecture, product, UX, design, security, infrastructure, and business decisions. Use `Decision Record` as the canonical name. `ADR` remains a useful synonym when engineers recognize it, but the broader name matches the scope.
 
-Decision Records can cover:
-
-- architecture,
-- product,
-- UX,
-- design,
-- security,
-- infrastructure,
-- business rules.
-
-Decision Records are append-oriented history. Do not rewrite rationale after the fact. Metadata corrections and status changes are allowed. If a later decision replaces an earlier one, mark the old record `superseded`, add `superseded_by`, and add `supersedes` to the new record.
+Decision Records preserve history. Do not delete old decisions. If a new decision replaces an old one, mark the old record `superseded`, add `superseded_by`, and add `supersedes` to the new record.
 
 ### Specification
 
-Answers: What behavior and constraints must the implementation satisfy?
+Answers: What behavior must implementation satisfy?
 
-Write a spec after the team has enough decision context to define expected behavior. A spec should be precise enough that an implementation agent can act without inventing product rules.
-
-Specs may change as current truth changes. When a spec conflicts with an active Decision Record, report documentation drift and resolve the conflict before relying on the spec.
+Use specs for current expected behavior and constraints. A spec should be precise enough that an implementation agent can act without inventing product rules.
 
 ### User Flow
 
 Answers: How does a user move through a capability?
 
-Use User Flows for product paths, decisions, and recovery states. Prefer Mermaid when a diagram helps readers see sequence or branching. Avoid decorative diagrams.
+Use Mermaid when sequence or branching helps the reader. Keep visual styling out of flows.
 
 ### Information Architecture
 
-Answers: What information, screens, sections, concepts, and hierarchy exist?
+Answers: What information exists and where does it live?
 
-IA defines product structure without visual styling. Keep component colors, spacing, animation, and interaction rules in Design System artifacts.
+Use IA for concepts, screens, sections, and hierarchy. Keep reusable visual rules in Design System docs.
 
 ### Design System
 
-Answers: What reusable visual and interaction rules must UI implementations follow?
+Answers: What reusable visual rules exist?
 
-Use Design System artifacts for component behavior, visual constraints, accessibility expectations, states, and reuse rules. Keep one-off feature behavior in specs.
+Use it for component anatomy, states, accessibility, interaction rules, and visual constraints that apply across features.
 
 ### Task
 
-Answers: What bounded implementation work needs completion?
+Answers: What bounded implementation work remains?
 
-Tasks should derive from accepted RFCs, active decisions, or current specs. A task can coordinate work, but it should not become the source of product truth.
+Use tasks to coordinate execution. Tasks should reference the accepted RFC, active Decision Record, or current spec that justifies the work.
 
 ### Prompt / Agent Context
 
-Answers: What context or instructions should an AI agent receive for a specific kind of work?
+Answers: What context should an AI agent receive?
 
-Prompts should reference canonical knowledge by ID or path. They should not duplicate large sections of product, design, or engineering documentation.
+Prompts should reference canonical IDs and paths. They should not duplicate large knowledge blocks.
 
 ## Metadata
 
-Use YAML frontmatter only when metadata improves discovery or validation.
-
-Recommended fields:
+Use metadata to improve retrieval, validation, and dependency reasoning. Keep it small.
 
 ```yaml
 ---
-id: DR-004
-title: Use Decision Record as the general decision artifact
-status: accepted
+id: SPEC-003
+title: Checkout payment authorization behavior
+status: current
 created: 2026-08-30
 updated: 2026-08-30
-authors: [engineering]
-tags: [methodology, decisions]
-related: [RFC-001]
-supersedes: [DR-001]
-superseded_by: []
+authors: [payments]
+scope: [checkout, payments]
+tags: [spec]
+depends_on: [DR-014]
+related: [FLOW-002]
 ---
 ```
 
-Field rules:
+Fields:
 
-- `id` gives the artifact a stable reference.
-- `title` should match the document heading.
-- `status` enables validation and lifecycle tracking.
-- `created` and `updated` help readers understand age.
-- `authors` identifies the accountable person, team, or role.
-- `tags` support scoped discovery.
-- `related` links nearby context without embedding it.
-- `supersedes` and `superseded_by` apply to Decision Records.
+- `id`: stable reference.
+- `title`: readable name.
+- `status`: lifecycle state.
+- `created` and `updated`: age and review signal.
+- `authors`: accountable person, team, or role.
+- `scope`: stable domain names for retrieval.
+- `tags`: document type or topic inside the scope.
+- `depends_on`: canonical documents that should trigger review if they change.
+- `related`: useful context without review obligation.
+- `supersedes` and `superseded_by`: Decision Record replacement links.
+- `drafted_by`: `human` or `agent`; absent means human. Agents must declare it on documents they draft.
+- `approved_by`: humans who approved promotion; required for agent-drafted documents in an active status.
+- `motivated_by`: the conflict or gap justifying an agent-drafted RFC.
 
-Avoid fields such as `consumers` or `produces` in V0. They can help automated graph tooling, but they also create metadata churn. Add them later only if manual discovery fails in real project use.
+Promotion is gated (DR-007): an agent may propose everything and promote nothing. Behavior documents entering current truth must be anchored — specs to an active decision; flows and IA to an active decision or current spec.
 
-## Lifecycle
+Use `scope` because retrieval improves when a reader can ask for knowledge about `storefront` or `checkout`. Use `depends_on` because reasoning improves when a changed decision points to specs, flows, and prompts that need review.
+
+`depends_on` is not a build graph. It is a review signal for knowledge that may become wrong when another artifact changes.
+
+Do not add `consumers` or `produces` in V1. They may help a generated graph later, but they add upkeep before this repository has evidence that teams need them.
+
+## Current Truth
+
+Use two small indexes:
+
+- Root domain catalog: `knowledge/index.yaml`
+- Domain decision projection: `knowledge/<domain>/decisions/index.yaml`
+
+The root catalog lists domains and current anchor artifacts. The decision projection maps active decision topics to active Decision Record IDs.
+
+Decision Records remain the source of rationale. Indexes serve retrieval.
+
+## Precedence
+
+Use this order when sources disagree:
+
+1. Active Decision Record listed in the relevant domain decision index.
+2. Current Specification that does not contradict an active decision.
+3. Domain IA, User Flow, Design System, or engineering playbook.
+4. Implementation behavior.
+5. Historical knowledge such as old RFCs and superseded decisions.
+
+A spec cannot override an active Decision Record. Implementation may lag behind a new spec. A code path may expose a missing constraint. Report conflicts before changing production behavior.
+
+## Knowledge Evolution
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Draft
-    Draft --> InReview
-    InReview --> Accepted
-    InReview --> Rejected
-    Accepted --> Implemented
-    Implemented --> Archived
-    Accepted --> Superseded
-    Implemented --> Superseded
-    Rejected --> Archived
+flowchart TD
+    Idea[Idea] --> RFC[RFC]
+    RFC --> Review[Review]
+    Review --> Accepted{Accepted?}
+    Accepted -->|No| Rejected[Rejected or archived RFC]
+    Accepted -->|Yes| Decision[Decision Record]
+    Decision --> Spec[Specification]
+    Spec --> Implementation[Implementation]
+    Implementation --> Validation[Validation]
+    Validation --> Learning[Operational learning]
+    Learning --> NeedsChange{Decision or behavior change?}
+    NeedsChange -->|No| Maintain[Update docs if needed]
+    NeedsChange -->|Yes| NewRFC[New RFC]
+    NewRFC --> Review
 ```
 
-Not every artifact uses every status. Product Vision and Design System docs may use `current`. RFCs move through proposal states. Decision Records use `accepted`, `superseded`, and sometimes `rejected` for recorded decisions the team declined.
+Operational learning can update a spec, add a playbook, or trigger a new RFC. Use a new RFC when learning changes behavior, cross-domain contracts, or a prior decision.
 
-## RFC, Decision, Spec, Task
-
-Use these boundaries:
-
-- RFC explores a change.
-- Decision Record records what the team decided.
-- Spec defines required behavior.
-- Task tracks bounded implementation work.
-
-Do not use tasks to settle product truth. Do not use specs to preserve debate. Do not use RFCs as permanent behavior definitions after the team has decided.
-
-## Current Truth And Historical Truth
-
-Decision Records preserve historical truth. The decision index provides current truth for agents and humans who need to know which decisions apply now.
-
-Use `knowledge/decisions/index.yaml`:
-
-```yaml
-current:
-  methodology.decision-record-naming: DR-004
-```
-
-The index maps a stable topic key to the active Decision Record ID. It must not duplicate rationale. Read the target Decision Record when you need reasoning.
+## Change Propagation
 
 When a decision changes:
 
 1. Create a new Decision Record.
-2. Add `supersedes` to the new record.
-3. Update the old record to `status: superseded`.
-4. Add `superseded_by` to the old record.
-5. Update the decision index to point at the new active record.
-6. Update specs, IA, flows, design-system docs, prompts, and tasks that relied on the old decision.
+2. Link the old and new records with `supersedes` and `superseded_by`.
+3. Update the domain decision index.
+4. Search for documents with `depends_on` pointing at the changed record.
+5. Review affected specs, flows, IA, design-system docs, prompts, and tasks.
+6. Update implementation tasks after canonical knowledge changes.
 
-## Precedence
+When a spec changes, review implementation and tests. Create a Decision Record only if the change records an important product, UX, design, architecture, security, infrastructure, or business decision.
 
-Use this order when documents conflict:
+## Agent Consumption
 
-1. Active accepted or implemented Decision Record listed in the decision index.
-2. Current Specification that does not contradict an active decision.
-3. Domain-specific canonical documentation, such as IA or Design System docs.
-4. Implementation behavior.
-5. Historical documentation, including superseded decisions and old RFCs.
+Agents should retrieve the minimum canonical knowledge needed for the task:
 
-This order does not mean documentation always beats code. A newly accepted spec may describe intended behavior that implementation has not reached yet. Existing code may reveal a missing constraint. Agents must report conflicts instead of changing production behavior without an explicit decision.
+1. Identify the domain.
+2. Read `knowledge/index.yaml`.
+3. Read the domain README or index.
+4. Read the relevant current spec.
+5. Read active decisions from the domain decision index.
+6. Read IA, flow, design-system, or prompt artifacts only when the task touches them.
+7. Read code after intended behavior is clear.
 
-## Agent Consumption Rules
+Agents must not invent product decisions. If canonical knowledge does not answer a product question, draft an RFC or ask for a decision.
 
-Agents should gather the smallest useful context:
+## Creation Criteria
 
-1. Identify the product area, capability, component, or subsystem.
-2. Read the relevant spec, if one exists.
-3. Read active decisions from the decision index for that area.
-4. Read domain docs that match the change, such as IA for navigation or Design System for UI components.
-5. Read implementation only after establishing the intended behavior.
+Create an RFC when the change has unresolved tradeoffs.
 
-Agents should not read the whole `knowledge/` tree by default. They should follow IDs, paths, tags, and direct references.
+Create a Decision Record when a decision explains future constraints.
 
-Agents must not invent product decisions. If canonical docs do not answer a product question, they should ask for a decision or draft an RFC.
+Create or update a spec when implementation behavior changes.
 
-## Maintenance Rules
+Create a flow when sequence or branching affects user experience.
 
-- Update docs in the same change set as behavior changes when practical.
-- Prefer editing current specs over creating parallel specs.
-- Keep superseded Decision Records in place.
-- Add a new Decision Record when a team changes a prior decision.
-- Archive RFCs when they no longer help readers understand current or recent work.
-- Remove links that stop helping discovery.
-- Run `npm run knowledge:check` before merging documentation changes.
+Create IA when a team needs stable names and hierarchy for information.
 
+Create Design System docs when a UI rule should apply beyond one screen.
+
+Create a prompt when repeated agent work needs scoped context.
+
+Create a task when someone needs to execute bounded work.

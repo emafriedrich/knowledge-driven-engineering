@@ -1,8 +1,3 @@
-# RFC: <Title>
-
-<!-- Primary question: What significant change are we proposing, why, what alternatives exist, and what questions need resolution? -->
-
-```yaml
 ---
 id: RFC-NNN
 title: <Title>
@@ -10,10 +5,16 @@ status: draft
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 authors: [<name-or-team>]
-tags: []
+drafted_by: <human-or-agent>
+scope: [<domain>]
+tags: [rfc]
+depends_on: []
 related: []
 ---
-```
+
+# RFC: <Title>
+
+<!-- Primary question: What significant change are we proposing, why, what alternatives exist, and what questions need resolution? -->
 
 ## Summary
 
@@ -38,4 +39,3 @@ related: []
 ## Outcome
 
 <!-- Fill after review: accepted, rejected, or deferred, with links to resulting decisions/specs. -->
-

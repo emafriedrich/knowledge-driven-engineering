@@ -1,0 +1,12 @@
+# Domain catalog for retrieval. Keep rationale inside canonical documents.
+domains:
+  methodology:
+    path: knowledge/methodology
+    description: Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
+    decision_index: knowledge/methodology/decisions/index.yaml
+    code_paths: [tools/, templates/, tests/, .github/]
+    current:
+      product_vision: KDE-PV-001
+      lifecycle_flow: KDE-FLOW-001
+      artifact_spec: KDE-SPEC-001
+      agent_context: KDE-PROMPT-001

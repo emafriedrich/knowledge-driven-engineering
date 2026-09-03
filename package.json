@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "knowledge:check": "node --experimental-strip-types tools/knowledge-check.ts",
-    "test": "node --test --experimental-strip-types tests/*.test.ts"
+    "test": "node --test --experimental-strip-types tests/*.test.ts",
+    "knowledge:context": "node --experimental-strip-types tools/knowledge-context.ts"
+  },
+  "dependencies": {
+    "yaml": "^2.9.0"
   }
 }
-

@@ -1,0 +1,10 @@
+# Maps decision topics to the active Decision Record.
+# Keep rationale in the referenced record, not in this file.
+current:
+  decision-record-naming: DR-004
+  decision-index: DR-002
+  template-size: DR-003
+  domain-first-organization: DR-005
+  scoped-dependency-metadata: DR-006
+  agent-authored-knowledge-gates: DR-007
+  drift-verification: DR-008

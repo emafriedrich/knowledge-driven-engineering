@@ -1,0 +1,4 @@
+# Gate 3 (DR-007): promoting knowledge to current truth requires owner approval.
+# With branch protection requiring code-owner review, an agent cannot merge a
+# status change on its own. Add per-domain owners as domains gain teams.
+* @emafriedrich
