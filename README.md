@@ -9,7 +9,7 @@ Its goal is reducing engineering mistakes while minimizing cognitive load. Docum
 From the root of your repository:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driving-engineering/main/install.sh | bash -s -- <your-first-domain>
+curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/main/install.sh | bash -s -- <your-first-domain>
 npm run knowledge:check
 ```
 
