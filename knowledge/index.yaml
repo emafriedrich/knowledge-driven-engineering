@@ -4,7 +4,7 @@ domains:
     path: knowledge/methodology
     description: Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
     decision_index: knowledge/methodology/decisions/index.yaml
-    code_paths: [tools/, templates/, tests/, .github/]
+    code_paths: [tools/, templates/, tests/, .github/, install.sh]
     current:
       product_vision: KDE-PV-001
       lifecycle_flow: KDE-FLOW-001

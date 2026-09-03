@@ -4,6 +4,19 @@ Knowledge-Driven Engineering is a lightweight engineering knowledge system for t
 
 Its goal is reducing engineering mistakes while minimizing cognitive load. Documentation is one representation of the knowledge; the product is the retrieval system that helps engineers and agents find the right context before changing behavior.
 
+## Quick Start
+
+From the root of your repository:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driving-engineering/main/install.sh | bash -s -- <your-first-domain>
+npm run knowledge:check
+```
+
+Then seed current truth: copy `templates/decision-record.md` into `knowledge/<your-first-domain>/decisions/`, record one decision your team already made, and list it in that domain's `decisions/index.yaml`.
+
+The installer is idempotent and never overwrites existing files. It adds the validator and companion tools, the templates, a domain scaffold, a CI workflow, Claude Code hooks, and a KDE section in your `AGENTS.md`. Details in [ADOPTING.md](ADOPTING.md).
+
 ## Core Thesis
 
 Code represents part of system knowledge. Product intent, design constraints, architecture, behavior rules, operational lessons, and tradeoffs also need versioned, traceable, retrievable representations.

@@ -20,7 +20,15 @@ your-project/
 
 What you do **not** copy: HANDBOOK.md, the `methodology` domain, `examples/`, `tests/`. Those define and exercise the method itself; link to them instead of vendoring them.
 
-## Steps
+## One-Command Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driving-engineering/main/install.sh | bash -s -- <your-first-domain>
+```
+
+`install.sh` performs the manual steps below, is idempotent, and never overwrites an existing file (it skips and tells you). Run it from the root of your repository; pass your first domain name as the argument. Offline or pinned installs work from a local clone: `KDE_SOURCE=/path/to/clone bash install.sh <domain>`.
+
+## Manual Steps
 
 1. **Create the knowledge tree.** `knowledge/index.yaml` with your first domain (a real product or system area — `storefront`, `payments`), plus that domain's `README.md` with its retrieval path.
 2. **Copy `templates/`** from this repository. Fill templates by replacing placeholder values; the frontmatter must stay at the top of the file.
