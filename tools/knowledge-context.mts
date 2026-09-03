@@ -63,6 +63,25 @@ for (const { catalog, name } of matches) {
       console.log(`- active decision ${topic}: ${describe(id)}`);
     }
   }
+
+  // Retrieval gap fix: between an agent drafting a document and a human
+  // promoting it, the draft exists but no index points at it. List drafts so
+  // the next session does not redo the analysis — clearly marked as not truth.
+  if (domain.path) {
+    const domainDir = domain.path.replace(/\/$/, '') + '/';
+    const pending = documents.filter((document) => {
+      const rel = relative(root, document.file);
+      if (!rel.startsWith(domainDir)) return false;
+      const status = String(document.data.status);
+      return status === 'draft' || status === 'in-review';
+    });
+
+    for (const document of pending) {
+      const status = String(document.data.status);
+      const draftedBy = String(document.data.drafted_by ?? 'human');
+      console.log(`- pending ${status} (${draftedBy}-drafted, NOT current truth): ${String(document.data.id)} (${relative(root, document.file)})`);
+    }
+  }
 }
 
 console.log('');
