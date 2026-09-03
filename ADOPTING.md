@@ -23,7 +23,7 @@ What you do **not** copy: HANDBOOK.md, the `methodology` domain, `examples/`, `t
 ## One-Command Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driving-engineering/main/install.sh | bash -s -- <your-first-domain>
+curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/main/install.sh | bash -s -- <your-first-domain>
 ```
 
 `install.sh` performs the manual steps below, is idempotent, and never overwrites an existing file (it skips and tells you). Run it from the root of your repository; pass your first domain name as the argument. Offline or pinned installs work from a local clone: `KDE_SOURCE=/path/to/clone bash install.sh <domain>`.
