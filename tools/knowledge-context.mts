@@ -1,7 +1,7 @@
 // Prints the retrieval bundle for a code path or domain (DR-008). Its output
 // is the context receipt an agent attaches to a PR or task (DR-007, Gate 5).
 import { relative, resolve } from 'node:path';
-import { checkKnowledge, loadCatalogs, parseDecisionIndex, values, type Catalog } from './knowledge-check.ts';
+import { checkKnowledge, loadCatalogs, parseDecisionIndex, values, type Catalog } from './knowledge-check.mts';
 
 const root = process.cwd();
 const input = process.argv[2];

@@ -144,7 +144,7 @@ Run:
 npm run knowledge:check
 ```
 
-The validator checks duplicate IDs, invalid statuses and dates, broken references, broken dependencies, supersession links, missing scopes, and stale decision-index targets. It also enforces that every knowledge document has parseable frontmatter and exactly one artifact type tag, that `scope` values are domains declared in the catalog, and it warns when a current-truth document is not referenced by any index or document.
+The validator scopes itself to cataloged knowledge trees; markdown elsewhere in the repository is ignored. It checks duplicate IDs, invalid statuses and dates, broken references, broken dependencies, supersession links, missing scopes, and stale decision-index targets. It also enforces that every knowledge document has parseable frontmatter and exactly one artifact type tag, that `scope` values are domains declared in the catalog, and it warns when a current-truth document is not referenced by any index or document.
 
 Since DR-007 and DR-008 the validator also enforces promotion gates on agent-drafted documents (an agent proposes, a human promotes), requires behavior documents entering current truth to be anchored to an active decision, and warns when a document is older than a dependency it relies on.
 
@@ -152,7 +152,7 @@ Two companion tools:
 
 ```bash
 npm run knowledge:context -- <file-or-domain>   # retrieval bundle / context receipt
-node --experimental-strip-types tools/drift-gate.ts  # PR drift gate (runs in CI)
+node --experimental-strip-types tools/drift-gate.mts  # PR drift gate (runs in CI)
 ```
 
 CI runs the validator and the test suite on every push and pull request, plus the drift gate on pull requests: code changes mapped to a domain with a current spec must touch that domain's knowledge or declare `no-behavior-change` in the PR body.

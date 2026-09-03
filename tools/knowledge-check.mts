@@ -38,13 +38,15 @@ const TYPE_TAGS = new Set(['vision', 'rfc', 'decision', 'spec', 'flow', 'ia', 'd
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 // Gate 6 (DR-007): agent drafts older than this are reported for archiving.
 const AGENT_DRAFT_EXPIRY_DAYS = 30;
-const SKIPPED_DIRECTORIES = new Set(['.git', 'node_modules', '.serena', 'coverage']);
+// Dot-directories (.git, .next, .turbo, .pnpm-store, .agents, ...) and build
+// output are never knowledge; skipping them keeps walks cheap in monorepos.
+const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'build', 'out', 'coverage', 'target', 'vendor']);
 
 function walk(root: string): string[] {
   const results: string[] = [];
 
   for (const entry of readdirSync(root)) {
-    if (SKIPPED_DIRECTORIES.has(entry)) continue;
+    if (entry.startsWith('.') || SKIPPED_DIRECTORIES.has(entry)) continue;
 
     const fullPath = join(root, entry);
     const stats = statSync(fullPath);
@@ -90,18 +92,6 @@ export function documentType(data: Frontmatter): string | null {
   return typeTags.length === 1 ? typeTags[0] : null;
 }
 
-function pathSegments(root: string, file: string): string[] {
-  return relative(root, file).split(/[\\/]/);
-}
-
-function isKnowledgeDocumentPath(root: string, file: string): boolean {
-  if (!file.endsWith('.md')) return false;
-  if (basename(file) === 'README.md') return false;
-
-  const segments = pathSegments(root, file);
-  return segments.includes('knowledge') && segments[0] !== 'templates';
-}
-
 export type CatalogDomain = {
   path?: string;
   decisionIndex?: string;
@@ -115,9 +105,12 @@ export type Catalog = {
   domains: Map<string, CatalogDomain>;
 };
 
+function findCatalogFiles(root: string, files: string[]): string[] {
+  return files.filter((file) => relative(root, file).replace(/\\/g, '/').endsWith('knowledge/index.yaml'));
+}
+
 export function loadCatalogs(root = process.cwd()): Catalog[] {
-  return walk(root)
-    .filter((file) => relative(root, file).replace(/\\/g, '/').endsWith('knowledge/index.yaml'))
+  return findCatalogFiles(root, walk(root))
     .map((file) => parseCatalog(file))
     .filter((catalog): catalog is Catalog => catalog !== null);
 }
@@ -199,9 +192,34 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
   const errors: string[] = [];
   const warnings: string[] = [];
   const files = walk(root);
-  const markdownFiles = files.filter((file) => file.endsWith('.md') && !relative(root, file).startsWith('templates/'));
-  const decisionIndexFiles = files.filter((file) => relative(root, file).replace(/\\/g, '/').endsWith('decisions/index.yaml'));
-  const catalogFiles = files.filter((file) => relative(root, file).replace(/\\/g, '/').endsWith('knowledge/index.yaml'));
+
+  // Canonical knowledge is scoped to trees anchored by a catalog. Markdown
+  // anywhere else in the repository (skills, app docs, other tools' files
+  // with their own frontmatter dialects) is not this validator's business.
+  const catalogs: Catalog[] = [];
+
+  for (const file of findCatalogFiles(root, files)) {
+    const catalog = parseCatalog(file);
+
+    if (!catalog) {
+      errors.push(`${relative(root, file)} is not a valid domain catalog`);
+      continue;
+    }
+
+    catalogs.push(catalog);
+  }
+
+  const knowledgeRoots = catalogs.map((catalog) => catalog.rootDir);
+  const underKnowledgeRoot = (file: string): boolean => knowledgeRoots.some((dir) => file.startsWith(dir + '/'));
+
+  if (existsSync(join(root, 'knowledge')) && !existsSync(join(root, 'knowledge', 'index.yaml'))) {
+    warnings.push('knowledge/ exists but has no index.yaml catalog; its documents are not validated');
+  }
+
+  const markdownFiles = files.filter((file) => file.endsWith('.md') && basename(file) !== 'README.md' && underKnowledgeRoot(file));
+  const decisionIndexFiles = files.filter(
+    (file) => relative(root, file).replace(/\\/g, '/').endsWith('decisions/index.yaml') && underKnowledgeRoot(file),
+  );
   const documents: DocumentRecord[] = [];
   const ids = new Map<string, DocumentRecord>();
 
@@ -211,9 +229,7 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
     if (!data) {
       // A knowledge document the parser cannot see is a silent integrity hole:
       // it would skip every check below while looking valid to a reader.
-      if (isKnowledgeDocumentPath(root, file)) {
-        errors.push(`${relative(root, file)} is a knowledge document without valid frontmatter at the top of the file`);
-      }
+      errors.push(`${relative(root, file)} is a knowledge document without valid frontmatter at the top of the file`);
       continue;
     }
 
@@ -387,17 +403,8 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
     }
   }
 
-  const catalogs: Catalog[] = [];
-
-  for (const file of catalogFiles) {
-    const catalog = parseCatalog(file);
-
-    if (!catalog) {
-      errors.push(`${relative(root, file)} is not a valid domain catalog`);
-      continue;
-    }
-
-    catalogs.push(catalog);
+  for (const catalog of catalogs) {
+    const file = catalog.file;
 
     for (const [domainName, domain] of catalog.domains) {
       for (const path of [domain.path, domain.decisionIndex]) {

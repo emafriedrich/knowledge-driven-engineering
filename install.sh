@@ -36,7 +36,7 @@ say "Installing Knowledge-Driven Engineering into $(pwd)"
 # --- Tools and templates -----------------------------------------------------
 mkdir -p tools templates
 
-for f in knowledge-check.ts knowledge-context.ts drift-gate.ts knowledge-hook.ts; do
+for f in knowledge-check.mts knowledge-context.mts drift-gate.mts knowledge-hook.mts; do
   if [ -e "tools/$f" ]; then skip "tools/$f"; else cp "$SRC/tools/$f" "tools/$f"; add "tools/$f"; fi
 done
 
@@ -109,8 +109,8 @@ if [ ! -e package.json ]; then
   add package.json
 fi
 if npm pkg set \
-  'scripts.knowledge:check=node --experimental-strip-types tools/knowledge-check.ts' \
-  'scripts.knowledge:context=node --experimental-strip-types tools/knowledge-context.ts' >/dev/null 2>&1; then
+  'scripts.knowledge:check=node --experimental-strip-types tools/knowledge-check.mts' \
+  'scripts.knowledge:context=node --experimental-strip-types tools/knowledge-context.mts' >/dev/null 2>&1; then
   say "  set   package.json scripts (knowledge:check, knowledge:context)"
 else
   say "  WARN  could not set package.json scripts; add knowledge:check and knowledge:context manually"
@@ -151,7 +151,7 @@ jobs:
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
           DRIFT_BASE_REF: origin/${{ github.base_ref }}
-        run: node --experimental-strip-types tools/drift-gate.ts
+        run: node --experimental-strip-types tools/drift-gate.mts
 WORKFLOW
   add .github/workflows/kde.yml
 fi
