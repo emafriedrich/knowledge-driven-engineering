@@ -146,6 +146,7 @@ jobs:
           else npm ci || npm install
           fi
       - run: npm run knowledge:check
+      - run: node --experimental-strip-types tools/knowledge-context.mts --check
       - name: Drift gate
         if: github.event_name == 'pull_request'
         env:

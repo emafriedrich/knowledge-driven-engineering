@@ -152,6 +152,8 @@ Two companion tools:
 
 ```bash
 npm run knowledge:context -- <file-or-domain>   # retrieval bundle / context receipt
+npm run knowledge:context -- --write            # render per-domain CONTEXT.md manifests
+npm run knowledge:context -- --check            # fail if committed manifests drifted (runs in CI)
 node --experimental-strip-types tools/drift-gate.mts  # PR drift gate (runs in CI)
 ```
 
