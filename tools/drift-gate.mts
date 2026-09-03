@@ -1,7 +1,7 @@
 // PR drift gate (DR-008): code changes mapped to a domain with a current spec
 // must touch that domain's knowledge or declare no-behavior-change in the PR body.
 import { execSync } from 'node:child_process';
-import { checkKnowledge, documentType, loadCatalogs } from './knowledge-check.ts';
+import { checkKnowledge, documentType, loadCatalogs } from './knowledge-check.mts';
 
 const root = process.cwd();
 const baseRef = process.env.DRIFT_BASE_REF ?? 'origin/main';

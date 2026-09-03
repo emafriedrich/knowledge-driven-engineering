@@ -72,6 +72,10 @@ Gates on status (DR-007): an agent-drafted document cannot hold `accepted`, `cur
 
 A domain entry in `knowledge/index.yaml` may declare `code_paths`: plain repository path prefixes of the implementation the domain governs (DR-008). Consumers use prefix matching; V1 has no glob support. `code_paths` feed the `knowledge:context` command and the CI drift gate.
 
+## Validation Scope
+
+The validator checks markdown only inside knowledge trees anchored by a catalog (`knowledge/index.yaml`). Markdown elsewhere in a repository — agent skills, application docs, other tools' frontmatter dialects — is not canonical knowledge and is ignored. A root `knowledge/` directory without a catalog produces a warning, because its documents would otherwise be silently unvalidated.
+
 ## Current Truth
 
 Each domain should expose current knowledge through an index. The root `knowledge/index.yaml` catalogs domains. Each domain may keep a local `decisions/index.yaml` for active decisions.

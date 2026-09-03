@@ -24,4 +24,4 @@ jobs:
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
           DRIFT_BASE_REF: origin/${{ github.base_ref }}
-        run: node --experimental-strip-types tools/drift-gate.ts
+        run: node --experimental-strip-types tools/drift-gate.mts

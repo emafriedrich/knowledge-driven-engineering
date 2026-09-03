@@ -40,9 +40,9 @@ if (input.hook_event_name === 'Stop') {
   process.exit(0);
 }
 
-let checkKnowledge: (typeof import('./knowledge-check.ts'))['checkKnowledge'];
+let checkKnowledge: (typeof import('./knowledge-check.mts'))['checkKnowledge'];
 try {
-  ({ checkKnowledge } = await import('./knowledge-check.ts'));
+  ({ checkKnowledge } = await import('./knowledge-check.mts'));
 } catch {
   // Dependencies not installed; CI remains the hard guarantee.
   process.exit(0);

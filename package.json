@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "knowledge:check": "node --experimental-strip-types tools/knowledge-check.ts",
+    "knowledge:check": "node --experimental-strip-types tools/knowledge-check.mts",
     "test": "node --test --experimental-strip-types tests/*.test.ts",
-    "knowledge:context": "node --experimental-strip-types tools/knowledge-context.ts"
+    "knowledge:context": "node --experimental-strip-types tools/knowledge-context.mts"
   },
   "dependencies": {
     "yaml": "^2.9.0"

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node --experimental-strip-types tools/knowledge-hook.ts"
+            "command": "node --experimental-strip-types tools/knowledge-hook.mts"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node --experimental-strip-types tools/knowledge-hook.ts"
+            "command": "node --experimental-strip-types tools/knowledge-hook.mts"
           }
         ]
       }
