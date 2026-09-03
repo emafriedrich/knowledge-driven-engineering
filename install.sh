@@ -108,12 +108,13 @@ if [ ! -e package.json ]; then
   npm pkg set type=module >/dev/null
   add package.json
 fi
-npm pkg set \
+if npm pkg set \
   'scripts.knowledge:check=node --experimental-strip-types tools/knowledge-check.ts' \
-  'scripts.knowledge:context=node --experimental-strip-types tools/knowledge-context.ts' >/dev/null
-say "  set   package.json scripts (knowledge:check, knowledge:context)"
-npm install --no-fund --no-audit --save yaml >/dev/null 2>&1
-say "  dep   yaml"
+  'scripts.knowledge:context=node --experimental-strip-types tools/knowledge-context.ts' >/dev/null 2>&1; then
+  say "  set   package.json scripts (knowledge:check, knowledge:context)"
+else
+  say "  WARN  could not set package.json scripts; add knowledge:check and knowledge:context manually"
+fi
 
 # --- CI ----------------------------------------------------------------------
 mkdir -p .github/workflows
@@ -137,8 +138,13 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
-      - run: npm ci || npm install
+          node-version: 22
+      - run: corepack enable
+      - run: |
+          if [ -f pnpm-lock.yaml ] || [ -f pnpm-workspace.yaml ]; then pnpm install
+          elif [ -f yarn.lock ]; then yarn install
+          else npm ci || npm install
+          fi
       - run: npm run knowledge:check
       - name: Drift gate
         if: github.event_name == 'pull_request'
@@ -194,6 +200,28 @@ When sources disagree: active Decision Record > current Specification > other do
 <!-- kde:end -->
 AGENTSBLOCK
   add "AGENTS.md KDE section"
+fi
+
+# --- Dependency: yaml --------------------------------------------------------
+# Last on purpose: the file copies above are the valuable, idempotent part and
+# must not be lost to a package-manager failure. Never abort on this step.
+PM="npm"
+PM_CMD=(npm install --no-fund --no-audit --save yaml)
+if [ -f pnpm-workspace.yaml ]; then
+  PM="pnpm"; PM_CMD=(pnpm add -w yaml)
+elif [ -f pnpm-lock.yaml ]; then
+  PM="pnpm"; PM_CMD=(pnpm add yaml)
+elif [ -f yarn.lock ]; then
+  PM="yarn"; PM_CMD=(yarn add yaml)
+elif [ -f bun.lock ] || [ -f bun.lockb ]; then
+  PM="bun"; PM_CMD=(bun add yaml)
+fi
+
+if "${PM_CMD[@]}" >/dev/null 2>&1; then
+  say "  dep   yaml (via ${PM})"
+else
+  say "  WARN  could not install the 'yaml' dependency (tried: ${PM_CMD[*]})."
+  say "        Install it manually before running knowledge:check."
 fi
 
 # --- Done --------------------------------------------------------------------
