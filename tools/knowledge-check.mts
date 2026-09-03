@@ -94,6 +94,7 @@ export function documentType(data: Frontmatter): string | null {
 
 export type CatalogDomain = {
   path?: string;
+  description?: string;
   decisionIndex?: string;
   codePaths: string[];
   current: Record<string, string>;
@@ -135,6 +136,7 @@ function parseCatalog(file: string): Catalog | null {
       if (rawDomain && typeof rawDomain === 'object' && !Array.isArray(rawDomain)) {
         const entry = rawDomain as Record<string, unknown>;
         if (typeof entry.path === 'string') domain.path = entry.path;
+        if (typeof entry.description === 'string') domain.description = entry.description;
         if (typeof entry.decision_index === 'string') domain.decisionIndex = entry.decision_index;
         for (const codePath of Array.isArray(entry.code_paths) ? entry.code_paths : []) {
           if (typeof codePath === 'string') domain.codePaths.push(codePath);
@@ -216,7 +218,9 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
     warnings.push('knowledge/ exists but has no index.yaml catalog; its documents are not validated');
   }
 
-  const markdownFiles = files.filter((file) => file.endsWith('.md') && basename(file) !== 'README.md' && underKnowledgeRoot(file));
+  const markdownFiles = files.filter(
+    (file) => file.endsWith('.md') && basename(file) !== 'README.md' && basename(file) !== 'CONTEXT.md' && underKnowledgeRoot(file),
+  );
   const decisionIndexFiles = files.filter(
     (file) => relative(root, file).replace(/\\/g, '/').endsWith('decisions/index.yaml') && underKnowledgeRoot(file),
   );

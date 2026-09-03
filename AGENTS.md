@@ -16,7 +16,7 @@ This file is the only document loaded every session. Read the rest on demand, at
 
 1. Identify the affected domain, such as `methodology`, `storefront`, `checkout`, or `orders`.
 2. Read `knowledge/index.yaml` to find the domain entry.
-3. Read the domain README or index.
+3. Read the domain `CONTEXT.md` when present: it is the generated map of current truth. Then the domain README.
 4. Read the current spec for the capability if one exists.
 5. Read active decisions from the domain `decisions/index.yaml`.
 6. Read IA, User Flow, Design System, engineering, or prompt artifacts only when the task touches them.
@@ -67,5 +67,5 @@ Create or update a task only after the canonical knowledge that justifies it exi
 - Report conflicts between code and knowledge before changing behavior.
 - Keep prompts short and reference canonical IDs or paths.
 - Create knowledge documents by copying the matching template in `templates/`.
-- Run `npm run knowledge:check` after changing knowledge artifacts.
+- After changing knowledge artifacts, run `npm run knowledge:check` and refresh manifests with `npm run knowledge:context -- --write`.
 

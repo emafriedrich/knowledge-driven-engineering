@@ -76,6 +76,10 @@ A domain entry in `knowledge/index.yaml` may declare `code_paths`: plain reposit
 
 The validator checks markdown only inside knowledge trees anchored by a catalog (`knowledge/index.yaml`). Markdown elsewhere in a repository — agent skills, application docs, other tools' frontmatter dialects — is not canonical knowledge and is ignored. A root `knowledge/` directory without a catalog produces a warning, because its documents would otherwise be silently unvalidated.
 
+## Domain Context Manifests
+
+A domain may commit a generated `CONTEXT.md` at its path (DR-009): the precomputed retrieval bundle — description, governed code paths, current anchors, active decisions, pending drafts marked as not truth. Only `knowledge:context --write` renders it; `knowledge:context --check` fails CI when the committed file drifts from the generator output. The manifest carries titles and pointers, never rationale. The validator exempts `CONTEXT.md` from frontmatter rules, like `README.md`.
+
 ## Current Truth
 
 Each domain should expose current knowledge through an index. The root `knowledge/index.yaml` catalogs domains. Each domain may keep a local `decisions/index.yaml` for active decisions.

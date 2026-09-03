@@ -123,9 +123,10 @@ test('rejects a knowledge document with no frontmatter at all', () => {
   });
 });
 
-test('allows README files without frontmatter inside knowledge trees', () => {
+test('allows README and generated CONTEXT files without frontmatter inside knowledge trees', () => {
   withFixture({
     'knowledge/test/README.md': '# Test Domain\n',
+    'knowledge/test/CONTEXT.md': '<!-- GENERATED -->\n# Context: test\n',
   }, (root) => {
     assert.deepEqual(checkKnowledge(root).errors, []);
   });
