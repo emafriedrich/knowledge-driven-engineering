@@ -38,6 +38,7 @@ const TYPES: Record<string, TypeSpec> = {
   model: { template: 'model.md', folder: 'models', prefix: 'MODEL', active: 'current' },
   contract: { template: 'contract.md', folder: 'contracts', prefix: 'CONTRACT', active: 'current' },
   task: { template: 'task.md', folder: 'tasks', prefix: 'TASK', active: null },
+  playbook: { template: 'playbook.md', folder: 'playbooks', prefix: 'PLAYBOOK', active: 'current' },
 };
 
 const ID_PATTERN = /^[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-\d+$/;

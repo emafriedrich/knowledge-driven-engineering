@@ -10,3 +10,4 @@ domains:
       lifecycle_flow: KDE-FLOW-001
       artifact_spec: KDE-SPEC-001
       agent_context: KDE-PROMPT-001
+      signals_playbook: KDE-PLAYBOOK-001
