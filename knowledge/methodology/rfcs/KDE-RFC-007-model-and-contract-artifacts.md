@@ -7,7 +7,7 @@ updated: 2026-09-08
 authors: [engineering]
 drafted_by: agent
 approved_by: [emafriedrich]
-motivated_by: Field use (posadas-delivery, 2026-09-07) — a product brief asked for state diagrams, domain models and API contracts; the artifact set has no home for them, so an order state machine with per-fulfillment transitions was written as spec prose and the resulting HTTP contract lived only in code
+motivated_by: Field use (2026-09-07) — a product brief asked for state diagrams, domain models and API contracts; the artifact set has no home for them, so an order state machine with per-fulfillment transitions was written as spec prose and the resulting HTTP contract lived only in code
 scope: [methodology]
 tags: [rfc, artifacts]
 depends_on: [KDE-SPEC-001]

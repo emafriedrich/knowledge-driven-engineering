@@ -7,7 +7,7 @@ updated: 2026-09-08
 authors: [engineering]
 drafted_by: agent
 approved_by: []
-motivated_by: Field use (posadas-delivery, 2026-09-07) — the adopter approved a Decision Record and did not know how to promote it in their own framework; an agent had to scaffold eight domains through a shell loop because the write hook validates each file and scopes must exist before any document can name them
+motivated_by: Field use — the adopter approved a Decision Record and did not know how to promote it in their own framework; an agent had to scaffold eight domains through a shell loop because the write hook validates each file and scopes must exist before any document can name them
 scope: [methodology]
 tags: [rfc, tooling]
 depends_on: [KDE-SPEC-001]

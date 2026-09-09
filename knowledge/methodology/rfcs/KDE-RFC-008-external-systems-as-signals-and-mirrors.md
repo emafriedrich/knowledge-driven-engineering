@@ -7,7 +7,7 @@ updated: 2026-09-08
 authors: [engineering]
 drafted_by: agent
 approved_by: []
-motivated_by: Field question (posadas-delivery, 2026-09-08) — the adopter asked how agents could inspect and build from Jira, Confluence and Notion rather than only from markdown; the precedence rule has no tier for such sources and nothing defines what may flow in or out of canonical knowledge
+motivated_by: Field question (2026-09-08) — the adopter asked how agents could inspect and build from Jira, Confluence and Notion rather than only from markdown; the precedence rule has no tier for such sources and nothing defines what may flow in or out of canonical knowledge
 scope: [methodology]
 tags: [rfc, integration]
 depends_on: [KDE-SPEC-001]
