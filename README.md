@@ -66,6 +66,8 @@ Inside a domain, artifacts keep different responsibilities:
 | User Flow | How does a user move through a capability? |
 | Information Architecture | What information exists and where does it live? |
 | Design System | What reusable visual rules exist? |
+| Model | What states, entities and transitions exist? |
+| Contract | What interface does the implementation expose? |
 | Task | What bounded implementation work remains? |
 | Prompt / Agent Context | What context should an AI agent receive? |
 

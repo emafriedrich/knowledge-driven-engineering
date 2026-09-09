@@ -75,6 +75,8 @@ Answers: How does a user move through a capability?
 
 Use Mermaid when sequence or branching helps the reader. Keep visual styling out of flows.
 
+A flow narrates the path a person takes, including recovery branches. It is not the inventory of every legal state of the system; that is a Model.
+
 ### Information Architecture
 
 Answers: What information exists and where does it live?
@@ -86,6 +88,18 @@ Use IA for concepts, screens, sections, and hierarchy. Keep reusable visual rule
 Answers: What reusable visual rules exist?
 
 Use it for component anatomy, states, accessibility, interaction rules, and visual constraints that apply across features.
+
+### Model
+
+Answers: What states, entities and transitions exist?
+
+Use it for lifecycle state machines and domain models. The diagram is the primary content (Mermaid `stateDiagram-v2`, `classDiagram`, or `erDiagram`); attach conditions to transitions in the Rules section so the diagram stays readable. A small diagram may stay inline in a spec; extract it to a Model when more than one document depends on the same machine or when transitions carry rules of their own.
+
+### Contract
+
+Answers: What interface does the implementation expose?
+
+Use it for HTTP APIs, events, and other interfaces that clients depend on: endpoints, payloads, error codes and their transport mapping, compatibility rules. Point `implements` at the code or the machine-readable definition (OpenAPI, JSON Schema) the contract describes; changing that code obliges a change to the contract. A contract enters current truth only on top of a current spec, and when the two disagree the spec wins.
 
 ### Task
 
@@ -226,6 +240,10 @@ Create a flow when sequence or branching affects user experience.
 Create IA when a team needs stable names and hierarchy for information.
 
 Create Design System docs when a UI rule should apply beyond one screen.
+
+Create a Model when a lifecycle or domain structure has more states or transitions than a reviewer can verify in prose.
+
+Create a Contract when a client — a frontend, an integration, an agent — would otherwise infer the interface from server code.
 
 Create a prompt when repeated agent work needs scoped context.
 

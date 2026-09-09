@@ -13,7 +13,7 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 | --- | --- | --- | --- |
 | product_vision | KDE-PV-001 | Knowledge-Driven Engineering product vision | 2026-08-30 |
 | lifecycle_flow | KDE-FLOW-001 | Knowledge evolution lifecycle | 2026-08-30 |
-| artifact_spec | KDE-SPEC-001 | Knowledge artifact and metadata rules | 2026-09-03 |
+| artifact_spec | KDE-SPEC-001 | Knowledge artifact and metadata rules | 2026-09-08 |
 | agent_context | KDE-PROMPT-001 | Coding agent context template | 2026-09-03 |
 
 ## Active decisions
@@ -28,12 +28,14 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 | agent-authored-knowledge-gates | DR-007 | Gate promotion of agent-authored knowledge | 2026-09-03 |
 | drift-verification | DR-008 | Verify knowledge drift mechanically | 2026-09-03 |
 | domain-context-manifests | DR-009 | Domains expose a generated CONTEXT.md manifest | 2026-09-03 |
+| model-and-contract-artifacts | DR-010 | Models and contracts are first-class artifacts bound to specs and code | 2026-09-08 |
 
 ## Pending — NOT current truth, do not obey
 
 - `KDE-RFC-003` (draft, agent-drafted): Upgrade path for framework tooling in adopting repositories
 - `KDE-RFC-004` (draft, agent-drafted): Lighter frontmatter for small documents
 - `KDE-RFC-006` (draft, agent-drafted): Lifecycle commands for creating, promoting and superseding knowledge
+- `KDE-RFC-008` (draft, agent-drafted): External systems as signals and mirrors, never as canonical stores
 - `KDE-RFC-009` (draft, agent-drafted): Declared implementation against drafts and executable acceptance checks
 
 ## Rules

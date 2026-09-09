@@ -20,6 +20,11 @@ Customer-facing restaurant and category discovery.
 | --- | --- | --- | --- |
 | storefront.category-first-discovery | FD-DR-001 | Show categories before restaurants on the storefront | 2026-08-30 |
 
+## Pending — NOT current truth, do not obey
+
+- `FD-CONTRACT-001` (draft, agent-drafted): Storefront discovery API
+- `FD-MODEL-001` (draft, agent-drafted): Category selection states
+
 ## Rules
 
 - This file is the map, not the rationale. Open the documents above before changing behavior.

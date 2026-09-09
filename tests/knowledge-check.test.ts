@@ -318,3 +318,40 @@ test('warns about expired agent drafts and rejects invalid drafted_by', () => {
     assert.match(result.errors.join('\n'), /RFC-002\.md has invalid drafted_by robot/);
   });
 });
+
+const MERMAID = '\n## Diagram\n\n```mermaid\nstateDiagram-v2\n    [*] --> Pending\n    Pending --> Done\n```\n';
+
+test('models: a current model needs a mermaid block and an anchor; a draft only warns', () => {
+  withFixture({
+    'knowledge/test/decisions/DR-001.md': frontmatter('DR-001', 'accepted'),
+    'knowledge/test/specs/SPEC-001.md': frontmatter('SPEC-001', 'current', { depends_on: '[DR-001]' }),
+    'knowledge/test/models/MODEL-001.md': frontmatter('MODEL-001', 'current', { tags: '[model]', depends_on: '[SPEC-001]' }) + MERMAID,
+    'knowledge/test/models/MODEL-002.md': frontmatter('MODEL-002', 'current', { tags: '[model]', depends_on: '[SPEC-001]' }),
+    'knowledge/test/models/MODEL-003.md': frontmatter('MODEL-003', 'current', { tags: '[model]' }) + MERMAID,
+    'knowledge/test/models/MODEL-004.md': frontmatter('MODEL-004', 'draft', { tags: '[model]' }),
+  }, (root) => {
+    const result = checkKnowledge(root);
+    const errors = result.errors.join('\n');
+    assert.doesNotMatch(errors, /MODEL-001\.md/);
+    assert.match(errors, /MODEL-002\.md is a model without a mermaid diagram block/);
+    assert.match(errors, /MODEL-003\.md has status current but does not depend on an active decision or current spec/);
+    assert.doesNotMatch(errors, /MODEL-004\.md/);
+    assert.match(result.warnings.join('\n'), /MODEL-004\.md is a model without a mermaid diagram block/);
+  });
+});
+
+test('contracts: current truth only on top of a current spec, and implements paths must exist', () => {
+  withFixture({
+    'knowledge/test/decisions/DR-001.md': frontmatter('DR-001', 'accepted'),
+    'knowledge/test/specs/SPEC-001.md': frontmatter('SPEC-001', 'current', { depends_on: '[DR-001]' }),
+    'src/api/orders.ts': 'export {};\n',
+    'knowledge/test/contracts/CONTRACT-001.md': frontmatter('CONTRACT-001', 'current', { tags: '[contract]', depends_on: '[SPEC-001]', implements: '[src/api/orders.ts]' }),
+    'knowledge/test/contracts/CONTRACT-002.md': frontmatter('CONTRACT-002', 'current', { tags: '[contract]', depends_on: '[DR-001]' }),
+    'knowledge/test/contracts/CONTRACT-003.md': frontmatter('CONTRACT-003', 'draft', { tags: '[contract]', implements: '[src/api/missing.ts]' }),
+  }, (root) => {
+    const errors = checkKnowledge(root).errors.join('\n');
+    assert.doesNotMatch(errors, /CONTRACT-001\.md/);
+    assert.match(errors, /CONTRACT-002\.md has status current but does not depend on a current spec/);
+    assert.match(errors, /CONTRACT-003\.md implements missing path src\/api\/missing\.ts/);
+  });
+});

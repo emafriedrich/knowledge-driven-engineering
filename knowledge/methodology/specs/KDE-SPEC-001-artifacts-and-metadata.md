@@ -3,11 +3,11 @@ id: KDE-SPEC-001
 title: Knowledge artifact and metadata rules
 status: current
 created: 2026-08-30
-updated: 2026-09-03
+updated: 2026-09-08
 authors: [engineering]
 scope: [methodology]
 tags: [spec, metadata, artifacts]
-depends_on: [DR-002, DR-003, DR-004, DR-005, DR-006, DR-007, DR-008]
+depends_on: [DR-002, DR-003, DR-004, DR-005, DR-006, DR-007, DR-008, DR-010]
 related: [KDE-PV-001, KDE-FLOW-001]
 ---
 
@@ -26,6 +26,8 @@ This spec defines artifact responsibilities, metadata fields, and retrieval rule
 - User Flow answers: How does a user move through a capability?
 - Information Architecture answers: What information exists and where does it live?
 - Design System answers: What reusable visual rules exist?
+- Model answers: What states, entities and transitions exist? Its Diagram section carries a Mermaid block.
+- Contract answers: What interface does the implementation expose? It names the code it obliges through `implements`.
 - Task answers: What bounded implementation work remains?
 - Prompt / Agent Context answers: What context should an AI agent receive?
 
@@ -65,12 +67,15 @@ Field responsibilities:
 - `drafted_by` declares authorship kind: `human` or `agent`. Absent means human (pre-gate documents).
 - `approved_by` lists the humans who approved promotion. Required non-empty for agent-drafted documents in an active status.
 - `motivated_by` names the conflict, question, or gap that justifies an agent-drafted RFC (an ID or a short description). Required for agent-drafted RFCs.
+- `implements` applies to Contracts: repository paths (prefixes) of the machine-readable definition or the code that exposes the interface. Every path must exist. These paths participate in the drift gate (DR-010).
 
-Gates on status (DR-007): an agent-drafted document cannot hold `accepted`, `current`, or `implemented` with empty `approved_by`. A spec entering current truth must depend on an active decision; a User Flow or Information Architecture document entering current truth must depend on an active decision or current spec.
+Gates on status (DR-007, DR-010): an agent-drafted document cannot hold `accepted`, `current`, or `implemented` with empty `approved_by`. A spec entering current truth must depend on an active decision; a User Flow, Information Architecture or Model document entering current truth must depend on an active decision or current spec; a Contract entering current truth must depend on a current spec. A Model without a Mermaid block is an error in current truth and a warning while drafted.
 
 ## Domain Catalog Fields
 
 A domain entry in `knowledge/index.yaml` may declare `code_paths`: plain repository path prefixes of the implementation the domain governs (DR-008). Consumers use prefix matching; V1 has no glob support. `code_paths` feed the `knowledge:context` command and the CI drift gate.
+
+The drift gate also enforces contract obligations (DR-010): when files under a current Contract's `implements` paths change and the contract file does not, the pull request must declare `no-behavior-change` or the gate fails.
 
 ## Validation Scope
 
@@ -93,3 +98,4 @@ Indexes point to canonical documents. They do not copy rationale.
 - A validator can detect gate violations on agent-drafted documents and warn when a document is older than a dependency it relies on.
 - An agent can obtain the retrieval bundle for a code path from `knowledge:context` without navigating by inference. The bundle also lists the domain's pending drafts, explicitly marked as not current truth, so in-flight analysis is discoverable before promotion.
 - A superseded Decision Record remains available as historical evidence.
+- A client-side agent can retrieve the interface of a capability from a Contract instead of reading server code, and a change to the code a current Contract implements cannot merge without touching the contract or declaring `no-behavior-change`.
