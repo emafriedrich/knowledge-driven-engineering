@@ -62,13 +62,13 @@ That path scales better than artifact-type folders because the agent avoids unre
 ## Unresolved Questions
 
 - Should domains declare owners once the method enters a multi-team product?
-- Should repositories add a code-to-knowledge map, such as `knowledge/code-map.yaml`, after integration with Posadas Delivery?
+- Should repositories add a code-to-knowledge map, such as `knowledge/code-map.yaml`, after integration with a real product?
 - Should `depends_on` become required for all specs and prompts, or remain allowed to be empty?
 - Should task artifacts live in this repository or stay in the team's normal issue tracker with links back to canonical knowledge?
 
 ## Recommendations For V2
 
-- Test the domain model against Posadas Delivery by mapping real areas such as storefront, checkout, restaurants, orders, payments, and admin.
+- Test the domain model against a real delivery product by mapping real areas such as storefront, checkout, restaurants, orders, payments, and admin.
 - Add a code-to-domain mapping only if agents struggle to find the right domain from file paths.
 - Add validator checks for domain names in `scope` after real domain names stabilize.
 - Add a review report command that lists documents depending on a changed ID.
