@@ -8,6 +8,7 @@
 //   knowledge supersede <OLD-ID> --by <NEW-ID>
 //   knowledge domain add <name> --description "<text>" [--code-paths a/ b/] [--catalog <file>]
 //   knowledge renumber <OLD-ID> <NEW-ID>
+//   knowledge done <TASK-ID> [--by <name>]
 //
 // Every command ends by running the validator and rewriting manifests, so the
 // repository never leaves a command in a state the validator would reject
@@ -602,6 +603,38 @@ export function commandRenumber(root: string, oldId: string, newId: string): Com
   return { changed: [...changed, ...writeManifests(root)], notes: [] };
 }
 
+// --- done -----------------------------------------------------------------------
+// Closes a task in the repository. When the task carries an external_ref the
+// tracker is the system of record for status (DR-014), so the command names
+// the ticket to close there as well.
+
+export function commandDone(root: string, id: string, options: { by?: string } = {}): CommandResult {
+  const { document } = findDocument(root, id);
+  if (documentType(document.data) !== 'task') throw new CommandError(`${id} is ${documentType(document.data) ?? 'untyped'}; done closes tasks`);
+  const status = String(document.data.status);
+  if (status === 'implemented') return { changed: [], notes: [`${id} is already done`] };
+  const doc = splitDocument(document.content);
+  if (!doc) throw new CommandError(`${relative(root, document.file)} has no frontmatter`);
+
+  const before = checkKnowledge(root).errors;
+  const saved = snapshot([document.file]);
+  setField(doc.front, 'status', 'implemented');
+  setField(doc.front, 'updated', today());
+  if (values(document.data, 'authors').length === 0 && options.by) setField(doc.front, 'authors', yamlList([options.by]), ['updated']);
+  writeFileSync(document.file, joinDocument(doc));
+
+  const blocking = blockingErrors(root, before, checkKnowledge(root).errors, [document.file]);
+  if (blocking.length > 0) {
+    restore(saved);
+    throw new CommandError(`done refused:\n- ${blocking.join('\n- ')}`);
+  }
+
+  const notes: string[] = [];
+  const refs = values(document.data, 'external_ref');
+  if (refs.length > 0) notes.push(`the tracker owns task status (DR-014): close ${refs.join(', ')} there as well`);
+  return { changed: [relative(root, document.file), ...writeManifests(root)], notes };
+}
+
 // --- CLI ------------------------------------------------------------------------
 
 function parseArgs(args: string[]): { positional: string[]; flags: Record<string, string[]> } {
@@ -627,6 +660,7 @@ const USAGE = `usage:
   knowledge supersede <OLD-ID> --by <NEW-ID> [--approved-by <human>]   (promotes a draft NEW-ID)
   knowledge domain add <name> --description "<text>" [--code-paths a/ b/] [--catalog knowledge/index.yaml]
   knowledge renumber <OLD-ID> <NEW-ID>
+  knowledge done <TASK-ID> [--by <name>]
 types: ${Object.keys(TYPES).join(', ')}`;
 
 export function commandName(argv: string[]): string | undefined {
@@ -654,6 +688,9 @@ export function run(root: string, argv: string[]): CommandResult {
     case 'renumber':
       if (rest.length !== 2) throw new CommandError(USAGE);
       return commandRenumber(root, rest[0], rest[1]);
+    case 'done':
+      if (rest.length !== 1) throw new CommandError(USAGE);
+      return commandDone(root, rest[0], { by: one('by') });
     default:
       throw new CommandError(USAGE);
   }

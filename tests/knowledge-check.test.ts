@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 
-import { checkKnowledge, documentType } from '../tools/knowledge-check.mts';
+import { checkKnowledge, documentType, loadCatalogs } from '../tools/knowledge-check.mts';
 
 // Documents are only validated inside a cataloged knowledge tree, so every
 // fixture that expects validation ships this catalog.
@@ -387,5 +387,22 @@ test('contracts: current truth only on top of a current spec, and implements pat
     assert.doesNotMatch(errors, /CONTRACT-001\.md/);
     assert.match(errors, /CONTRACT-002\.md has status current but does not depend on a current spec/);
     assert.match(errors, /CONTRACT-003\.md implements missing path src\/api\/missing\.ts/);
+  });
+});
+
+test('external systems (DR-014): external_ref needs a tracker shape and belongs to tasks only; trackers parse from the catalog', () => {
+  withFixture({
+    'knowledge/index.yaml': 'domains:\n  test:\n    path: knowledge/test\n    trackers:\n      jira: PD\n      linear: 7\n',
+    'knowledge/test/tasks/TASK-001.md': frontmatter('TASK-001', 'draft', { tags: '[task]', external_ref: 'jira:PD-123' }),
+    'knowledge/test/tasks/TASK-002.md': frontmatter('TASK-002', 'draft', { tags: '[task]', external_ref: 'https://linear.app/team/ENG-42' }),
+    'knowledge/test/tasks/TASK-003.md': frontmatter('TASK-003', 'draft', { tags: '[task]', external_ref: 'PD-123' }),
+    'knowledge/test/specs/SPEC-001.md': frontmatter('SPEC-001', 'draft', { external_ref: 'jira:PD-9' }),
+  }, (root) => {
+    const output = checkKnowledge(root).errors.join('\n');
+    assert.doesNotMatch(output, /TASK-001|TASK-002/);
+    assert.match(output, /TASK-003\.md has external_ref PD-123 \(expected <system>:<id>/);
+    assert.match(output, /SPEC-001\.md has external_ref but is not a task/);
+    const domain = loadCatalogs(root)[0].domains.get('test')!;
+    assert.deepEqual(domain.trackers, { jira: 'PD' }, 'non-string tracker keys are ignored');
   });
 });

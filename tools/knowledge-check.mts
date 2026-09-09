@@ -68,6 +68,9 @@ const FOLDER_TYPES: Record<string, string> = {
   tasks: 'task',
   playbooks: 'playbook',
 };
+// A task's external_ref names a ticket in a tracker (DR-014): `<system>:<id>` or a URL.
+// Only the shape is checked; reachability would need credentials the validator must not hold.
+const EXTERNAL_REF = /^(?:[a-z][a-z0-9-]*:\S+|https?:\/\/\S+)$/;
 // A model's primary content is its diagram (DR-010).
 const MERMAID_BLOCK = /```mermaid\b/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -132,6 +135,8 @@ export type CatalogDomain = {
   description?: string;
   decisionIndex?: string;
   codePaths: string[];
+  // External trackers that own task status for this domain (DR-014): system -> key.
+  trackers: Record<string, string>;
   current: Record<string, string>;
 };
 
@@ -166,7 +171,7 @@ function parseCatalog(file: string): Catalog | null {
 
   if (rawDomains && typeof rawDomains === 'object' && !Array.isArray(rawDomains)) {
     for (const [name, rawDomain] of Object.entries(rawDomains as Record<string, unknown>)) {
-      const domain: CatalogDomain = { current: {}, codePaths: [] };
+      const domain: CatalogDomain = { current: {}, codePaths: [], trackers: {} };
 
       if (rawDomain && typeof rawDomain === 'object' && !Array.isArray(rawDomain)) {
         const entry = rawDomain as Record<string, unknown>;
@@ -175,6 +180,12 @@ function parseCatalog(file: string): Catalog | null {
         if (typeof entry.decision_index === 'string') domain.decisionIndex = entry.decision_index;
         for (const codePath of Array.isArray(entry.code_paths) ? entry.code_paths : []) {
           if (typeof codePath === 'string') domain.codePaths.push(codePath);
+        }
+        const trackers = entry.trackers;
+        if (trackers && typeof trackers === 'object' && !Array.isArray(trackers)) {
+          for (const [system, key] of Object.entries(trackers as Record<string, unknown>)) {
+            if (typeof key === 'string') domain.trackers[system] = key;
+          }
         }
 
         const current = entry.current;
@@ -336,6 +347,14 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
       }
     } else if (typeTags.length > 1) {
       errors.push(`${relative(root, file)} has multiple artifact type tags (${typeTags.join(', ')})`);
+    }
+
+    for (const reference of values(data, 'external_ref')) {
+      if (documentType(data) !== 'task') {
+        errors.push(`${relative(root, file)} has external_ref but is not a task; only task status may live in a tracker (DR-014)`);
+      } else if (!EXTERNAL_REF.test(reference)) {
+        errors.push(`${relative(root, file)} has external_ref ${reference} (expected <system>:<id>, like jira:PD-123, or a URL)`);
+      }
     }
   }
 
