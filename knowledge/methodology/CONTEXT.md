@@ -15,6 +15,7 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 | lifecycle_flow | KDE-FLOW-001 | Knowledge evolution lifecycle | 2026-08-30 |
 | artifact_spec | KDE-SPEC-001 | Knowledge artifact and metadata rules | 2026-09-08 |
 | agent_context | KDE-PROMPT-001 | Coding agent context template | 2026-09-03 |
+| signals_playbook | KDE-PLAYBOOK-001 | Drafting knowledge from external signals | 2026-09-09 |
 
 ## Active decisions
 
@@ -37,7 +38,6 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 
 ## Pending — NOT current truth, do not obey
 
-- `KDE-PLAYBOOK-001` (draft, agent-drafted): Drafting knowledge from external signals
 - `KDE-RFC-010` (draft, agent-drafted): Distribute framework tooling as an npm package
 
 ## Rules

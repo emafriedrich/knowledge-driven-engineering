@@ -1,11 +1,12 @@
 ---
 id: KDE-PLAYBOOK-001
 title: Drafting knowledge from external signals
-status: draft
+status: current
 created: 2026-09-09
 updated: 2026-09-09
+authors: [emafriedrich]
 drafted_by: agent
-approved_by: []
+approved_by: [emafriedrich]
 scope: [methodology]
 tags: [playbook, integration]
 depends_on: [DR-014]
