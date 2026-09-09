@@ -10,3 +10,4 @@ current:
   drift-verification: DR-008
   domain-context-manifests: DR-009
   model-and-contract-artifacts: DR-010
+  tooling-upgrade-path: DR-011

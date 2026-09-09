@@ -1,17 +1,17 @@
 ---
 id: KDE-RFC-003
 title: Upgrade path for framework tooling in adopting repositories
-status: draft
+status: accepted
 created: 2026-09-03
-updated: 2026-09-03
+updated: 2026-09-09
 authors: [engineering]
 drafted_by: agent
-approved_by: []
+approved_by: [emafriedrich]
 motivated_by: Three consecutive field reports ran stale tooling because the idempotent installer never updates existing files
 scope: [methodology]
 tags: [rfc, tooling]
 depends_on: [KDE-SPEC-001]
-related: [KDE-RFC-002]
+related: [KDE-RFC-002, DR-011, KDE-RFC-010]
 ---
 
 # RFC: Upgrade Path For Framework Tooling In Adopting Repositories
@@ -40,9 +40,11 @@ Classify installed files by owner:
 
 ## Open Questions
 
-- Should `templates/` be framework-owned when the adopter has not modified them (hash comparison)?
-- Should the installer warn on version skew even without `--upgrade`?
+Both resolved at review (2026-09-09):
+
+- `templates/` stay adopter-owned; no hash comparison. Templates are the team's authoring conventions, and the framework's contract with adopters is KDE-SPEC-001 plus the validator, not the template text: a spec change that adds a required section reaches adopters as a validator error, and new template files are already added by a plain installer run because they do not exist yet. Refreshing an unmodified template buys nothing the validator does not already provide, and it would make local edits the one thing that silently changes upgrade behavior.
+- The installer warns on version skew on every run, not only with `--upgrade`. The point of the flag is that adopters do not have to remember it; a warning on the run they were already going to make is how they learn it exists.
 
 ## Outcome
 
-Pending review.
+Accepted on 2026-09-09. Decision recorded in DR-011. Implementation (the `--upgrade` flag, `# kde-version:` markers, the always-on skew warning) is tracked as a consequence of DR-011 and is not yet in `install.sh`. The first alternative — distributing the tools as an npm package — is carried forward as KDE-RFC-010 so it is decided explicitly rather than left as the "eventual right answer" in prose.
