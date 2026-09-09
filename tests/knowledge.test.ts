@@ -5,7 +5,7 @@ import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 
 import { checkKnowledge } from '../tools/knowledge-check.mts';
-import { CommandError, commandDomainAdd, commandNew, commandPromote, commandRenumber, commandSupersede, run } from '../tools/knowledge.mts';
+import { CommandError, commandDomainAdd, commandDone, commandNew, commandPromote, commandRenumber, commandSupersede, run } from '../tools/knowledge.mts';
 
 const repo = resolve(import.meta.dirname, '..');
 const CATALOG = 'domains:\n  test:\n    path: knowledge/test\n    description: Test domain.\n';
@@ -191,5 +191,27 @@ test('cli: usage errors are CommandErrors, and flags with several values are col
     assert.match(readFileSync(join(root, 'knowledge/index.yaml'), 'utf8'), /code_paths: \[src\/pay\/, src\/billing\/\]/);
     run(root, ['new', 'decision', 'pay', 'Charge', 'on', 'dispatch', '--author', 'ema']);
     assert.ok(existsSync(join(root, 'knowledge/pay/decisions/DR-001-charge-on-dispatch.md')));
+  });
+});
+
+test('done: closes a task, refuses non-tasks, and names the tracker ticket when there is one', () => {
+  withFixture({}, (root) => {
+    commandNew(root, 'task', 'test', 'Wire the checkout button', { author: 'ema' });
+    const file = only(join(root, 'knowledge/test/tasks'), 'TASK-001-');
+    writeFileSync(file, readFileSync(file, 'utf8').replace(/^external_ref:.*$/m, 'external_ref: jira:PD-123'));
+    const result = commandDone(root, 'TASK-001');
+    assert.equal(front(file).status, 'implemented');
+    assert.match(result.notes.join('\n'), /close jira:PD-123 there as well/);
+    assert.deepEqual(checkKnowledge(root).errors, []);
+    assert.deepEqual(commandDone(root, 'TASK-001').changed, [], 'idempotent');
+
+    commandNew(root, 'task', 'test', 'Anonymous task');
+    assert.throws(() => commandDone(root, 'TASK-002'), /done refused:\n- .*no authors/);
+    assert.equal(front(only(join(root, 'knowledge/test/tasks'), 'TASK-002-')).status, 'draft', 'rolled back');
+    commandDone(root, 'TASK-002', { by: 'ema' });
+    assert.equal(front(only(join(root, 'knowledge/test/tasks'), 'TASK-002-')).status, 'implemented');
+
+    commandNew(root, 'decision', 'test', 'Not a task');
+    assert.throws(() => commandDone(root, 'DR-001'), /done closes tasks/);
   });
 });

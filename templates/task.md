@@ -10,6 +10,7 @@ scope: [<domain>]
 tags: [task]
 depends_on: [<SPEC-or-DR-id>]
 related: []
+external_ref: # <system>:<id> when a tracker owns this task's status (DR-014)
 ---
 
 # TASK-NNN: <Title>

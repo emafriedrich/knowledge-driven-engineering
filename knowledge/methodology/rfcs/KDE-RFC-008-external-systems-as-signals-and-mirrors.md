@@ -1,17 +1,17 @@
 ---
 id: KDE-RFC-008
 title: External systems as signals and mirrors, never as canonical stores
-status: draft
+status: accepted
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 authors: [engineering]
 drafted_by: agent
-approved_by: []
+approved_by: [emafriedrich]
 motivated_by: Field question (2026-09-08) — the adopter asked how agents could inspect and build from Jira, Confluence and Notion rather than only from markdown; the precedence rule has no tier for such sources and nothing defines what may flow in or out of canonical knowledge
 scope: [methodology]
 tags: [rfc, integration]
 depends_on: [KDE-SPEC-001]
-related: [DR-007, DR-008, DR-009, KDE-RFC-007]
+related: [DR-007, DR-008, DR-009, DR-014, KDE-RFC-007, KDE-PLAYBOOK-001]
 ---
 
 # RFC: External Systems As Signals And Mirrors, Never As Canonical Stores
@@ -45,10 +45,12 @@ Making a SaaS tool canonical would surrender the properties the method depends o
 
 ## Open Questions
 
-- Mirror cadence: on promotion only, nightly, or both?
-- Should `external_ref` be validated for reachability in CI (requires credentials in CI) or only for shape?
-- Which side wins when task status conflicts (repository moved to `done`, tracker still open)? Proposal: the tracker, since it is the declared system of record for status.
+All three resolved at review (2026-09-09):
+
+- Mirrors regenerate on promotion only — a status change on the default branch. No schedule: a mirror that changes when nothing was promoted invites the belief that it is edited somewhere else.
+- `external_ref` is checked for shape only, offline. Nothing in CI reaches an external system; CI must never hold tracker credentials, and a validator that needs the network is a validator that fails for reasons unrelated to the knowledge.
+- The tracker wins on task status. It is the declared system of record for status, and a repository-side close is a request, not the truth: `knowledge done` records the outcome and names the ticket to close.
 
 ## Outcome
 
-Pending review.
+Accepted on 2026-09-09. Decision recorded in DR-014. Shipped now: the raw-signals precedence tier (HANDBOOK, AGENTS sections, manifests), the canonical-store rule in KDE-SPEC-001, `external_ref` on tasks with shape validation, `trackers` in the catalog, `knowledge done`, and KDE-PLAYBOOK-001 (draft) for drafting from signals. Not yet built, and recorded as consequences of DR-014: the `knowledge:mirror` publisher and the task-status sync, which need an adopter with a configured tracker to build against.

@@ -69,6 +69,7 @@ Field responsibilities:
 - `drafted_by` declares authorship kind: `human` or `agent`. Absent means human (pre-gate documents).
 - `approved_by` lists the humans who approved promotion. Required non-empty for agent-drafted documents in an active status.
 - `motivated_by` names the conflict, question, or gap that justifies an agent-drafted RFC (an ID or a short description). Required for agent-drafted RFCs.
+- `external_ref` applies to Tasks: the ticket in an external tracker that owns the task's status and assignee (DR-014), as `<system>:<id>` (`jira:PD-123`) or a URL. Shape is validated; reachability is not.
 - `implements` applies to Contracts: repository paths (prefixes) of the machine-readable definition or the code that exposes the interface. Every path must exist. These paths participate in the drift gate (DR-010).
 
 Gates on status (DR-007, DR-010): an agent-drafted document cannot hold `accepted`, `current`, or `implemented` with empty `approved_by`. A spec entering current truth must depend on an active decision; a User Flow, Information Architecture or Model document entering current truth must depend on an active decision or current spec; a Contract entering current truth must depend on a current spec. A Model without a Mermaid block is an error in current truth and a warning while drafted.
@@ -76,6 +77,8 @@ Gates on status (DR-007, DR-010): an agent-drafted document cannot hold `accepte
 ## Domain Catalog Fields
 
 A domain entry in `knowledge/index.yaml` may declare `code_paths`: plain repository path prefixes of the implementation the domain governs (DR-008). Consumers use prefix matching; V1 has no glob support. `code_paths` feed the `knowledge:context` command and the CI drift gate.
+
+A domain entry may declare `trackers`: a map from tracker system to the key that holds the domain's tasks (`trackers: { jira: PD }`), so an agent can resolve "the tracker for `orders`" from the catalog instead of from a prompt (DR-014).
 
 The drift gate also enforces contract obligations (DR-010): when files under a current Contract's `implements` paths change and the contract file does not, the pull request must declare `no-behavior-change` or the gate fails.
 
@@ -92,6 +95,8 @@ A domain may commit a generated `CONTEXT.md` at its path (DR-009): the precomput
 Each domain should expose current knowledge through an index. The root `knowledge/index.yaml` catalogs domains. Each domain may keep a local `decisions/index.yaml` for active decisions.
 
 Indexes point to canonical documents. They do not copy rationale.
+
+Only markdown under a catalog is canonical (DR-014). External systems — trackers, wikis, chat — are raw signals below historical knowledge in precedence, or one-way mirrors of accepted knowledge; the one thing a tracker may own is a task's status and assignee.
 
 ## Acceptance Checks
 

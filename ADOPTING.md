@@ -69,6 +69,7 @@ npm run knowledge -- new decision orders "Orders are immutable after payment" --
 npm run knowledge -- promote DR-001 --by <you>
 npm run knowledge -- supersede DR-001 --by DR-002 --approved-by <you>
 npm run knowledge -- renumber DR-002 DR-010
+npm run knowledge -- done TASK-004
 ```
 
 Agents use `new`, `domain add` and `renumber` (with `--by agent` on what they draft); `promote` and `supersede` are for humans, and the AGENTS.md section the installer writes says so. Ids are allocated by scanning the catalog and git history; when two branches still collide, the validator reports the duplicate and `renumber` fixes it in one command.
