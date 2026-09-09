@@ -34,7 +34,7 @@ superseded_by: []
 
 - `install.sh` gains the `--upgrade` flag, the owner classification, the marker stamping and comparison, and the warning; this repository's CI gains the version-bump guard; CONTRIBUTING.md records the bump rule.
 - ADOPTING.md documents `--upgrade`, the owner split and the warning.
-- Adopters with local edits to a framework-owned file lose them on `--upgrade`; the per-file report is how they notice. Local edits belong in adopter-owned files or in a proposal upstream.
+- Local edits to a framework-owned file are overwritten by `--upgrade`, and the installer warns on each file it overwrites that way. Framework-owned files are not an extension point: a repository that needs different tooling forks the framework and installs from the fork; improvements to the tooling itself are welcome as contributions here.
 - If KDE-RFC-010 is accepted, the flag and the marker are retired in favour of the dependency version, and this record is superseded.
 
 ## Supersession

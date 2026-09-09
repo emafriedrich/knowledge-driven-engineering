@@ -59,8 +59,13 @@ framework_file() {
     say "  ok    $dest (kde ${KDE_VERSION})"
   elif [ "$UPGRADE" -eq 1 ]; then
     local from; from="$(installed_version "$dest")"
-    [ "$from" = "$KDE_VERSION" ] && from="local edits at ${from}"
-    say "  upgrade $dest (${from} -> ${KDE_VERSION})"
+    if [ "$from" = "$KDE_VERSION" ]; then
+      # Same version, different content: the adopter edited the file. Overwrite,
+      # but say so — framework-owned files are not an extension point.
+      say "  WARN  $dest had local edits; overwritten with kde ${KDE_VERSION}. Framework-owned files are not meant to be edited: fork the framework if you need different tooling."
+    else
+      say "  upgrade $dest (${from} -> ${KDE_VERSION})"
+    fi
     cat "$tmp" > "$dest"
   else
     skip "$dest"
