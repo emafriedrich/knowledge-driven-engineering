@@ -52,15 +52,17 @@ related: []
 ---
 ```
 
+Always required (DR-012): `id`, `title`, `status`, `created`, `updated`, `scope`. The rest have defaults or gate obligations: `depends_on` and `related` absent mean empty; `authors` is required once a document is in current truth (`accepted`, `current`, `implemented`); the artifact type in `tags` is inferred from the folder the document sits in (`decisions/`, `specs/`, `rfcs/`, `flows/`, `ia/`, `design-system/`, `models/`, `contracts/`, `prompts/`, `tasks/`, `playbooks/`) when no type tag is written — an explicit tag always wins, and outside those folders the tag is required. Gates that require *content* (a spec's `depends_on` anchor, an agent draft's `approved_by`) are unchanged by the defaults.
+
 Field responsibilities:
 
 - `id` provides a stable reference.
 - `title` supports fast scanning and validation.
 - `status` shows lifecycle state.
 - `created` and `updated` show age.
-- `authors` identifies accountable owners.
+- `authors` identifies accountable owners. Required in current truth; a draft may be anonymous.
 - `scope` identifies the product or system area for retrieval.
-- `tags` classify document type or topic inside a scope.
+- `tags` classify document type or topic inside a scope. The type tag may be inferred from the artifact folder.
 - `depends_on` lists canonical documents that should trigger review if they change.
 - `related` lists useful context that does not create a review obligation.
 - `supersedes` and `superseded_by` apply to Decision Records.

@@ -1,17 +1,17 @@
 ---
 id: KDE-RFC-004
 title: Lighter frontmatter for small documents
-status: draft
+status: implemented
 created: 2026-09-03
-updated: 2026-09-03
+updated: 2026-09-09
 authors: [engineering]
 drafted_by: agent
-approved_by: []
+approved_by: [emafriedrich]
 motivated_by: Field review found ten required frontmatter fields too expensive for small decisions; if documenting costs more than deciding, people decide without documenting
 scope: [methodology]
 tags: [rfc, metadata]
 depends_on: [KDE-SPEC-001]
-related: [DR-006, DR-007]
+related: [DR-006, DR-007, DR-012]
 ---
 
 # RFC: Lighter Frontmatter For Small Documents
@@ -44,9 +44,11 @@ Defaults for the rest:
 
 ## Open Questions
 
-- Does folder-based type inference hold in repositories that organize a domain differently?
-- Should the validator warn (not error) when a current-truth document has empty `depends_on` even outside Gate 4's document types?
+Both resolved at review (2026-09-09):
+
+- Folder-based inference holds for any organization because it degrades to the current rule: outside a recognized folder the type tag is required, exactly as today. The folders in question are inside `knowledge/<domain>/`, a tree the installer creates — an adopting repository, new or mature, has no prior convention there to preserve; the code layout it does have is mapped through `code_paths`, not folders. Inference is a discount for the convention, not a constraint on those who skip it.
+- No warning for empty `depends_on` outside Gate 4's types. Decision Records are the main case and most legitimately depend on nothing; a warning that fires on correct documents is one nobody reads.
 
 ## Outcome
 
-Pending review.
+Accepted and implemented on 2026-09-09. Decision recorded in DR-012. Review confirmed two points the proposal only implied: `approved_by`, `motivated_by`, `supersedes` and `superseded_by` are untouched — they were already optional with gate obligations and stay so — and `drafted_by` is kept as the one field an agent must write, because DR-007's gates, the `motivated_by` requirement and the manifest's "agent-drafted" marking all hang on it; humans do not write it. Validator, KDE-SPEC-001, HANDBOOK and tests updated; templates keep the full shape.

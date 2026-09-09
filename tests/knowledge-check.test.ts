@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 
-import { checkKnowledge } from '../tools/knowledge-check.mts';
+import { checkKnowledge, documentType } from '../tools/knowledge-check.mts';
 
 // Documents are only validated inside a cataloged knowledge tree, so every
 // fixture that expects validation ships this catalog.
@@ -177,8 +177,42 @@ test('requires exactly one artifact type tag', () => {
     'knowledge/test/two-types.md': frontmatter('SPEC-002', 'draft', { tags: '[spec, decision]' }),
   }, (root) => {
     const output = checkKnowledge(root).errors.join('\n');
-    assert.match(output, /no-type\.md has no artifact type tag/);
+    assert.match(output, /no-type\.md has no artifact type tag and is not in a recognized artifact folder/);
     assert.match(output, /two-types\.md has multiple artifact type tags \(spec, decision\)/);
+  });
+});
+
+test('lighter frontmatter (DR-012): six fields suffice for a draft in a recognized folder', () => {
+  const minimal = '---\nid: DR-001\ntitle: Small decision\nstatus: draft\ncreated: 2026-09-01\nupdated: 2026-09-01\nscope: [test]\n---\n\n# DR-001\n';
+  withFixture({ 'knowledge/test/decisions/DR-001.md': minimal }, (root) => {
+    const result = checkKnowledge(root);
+    assert.deepEqual(result.errors, []);
+    assert.equal(documentType(result.documents[0].data), 'decision', 'type inferred from the decisions/ folder');
+  });
+});
+
+test('lighter frontmatter (DR-012): authors are required once a document is current truth', () => {
+  withFixture({
+    'knowledge/test/decisions/index.yaml': 'current:\n  topic: DR-001\n',
+    'knowledge/test/decisions/DR-001.md': frontmatter('DR-001', 'accepted', { authors: '[]' }),
+    'knowledge/test/rfcs/RFC-001.md': frontmatter('RFC-001', 'draft', { authors: '[]', tags: '[rfc]' }),
+  }, (root) => {
+    const output = checkKnowledge(root).errors.join('\n');
+    assert.match(output, /DR-001\.md has status accepted but no authors \(required in current truth\)/);
+    assert.doesNotMatch(output, /RFC-001\.md/);
+  });
+});
+
+test('lighter frontmatter (DR-012): an explicit type tag wins over the folder', () => {
+  withFixture({
+    'knowledge/test/decisions/index.yaml': 'current:\n  topic: DR-001\n',
+    'knowledge/test/decisions/DR-001.md': frontmatter('DR-001', 'accepted'),
+    'knowledge/test/decisions/SPEC-001.md': frontmatter('SPEC-001', 'current', { tags: '[spec]', depends_on: '[DR-001]' }),
+  }, (root) => {
+    const result = checkKnowledge(root);
+    assert.deepEqual(result.errors, []);
+    const spec = result.documents.find((document) => document.data.id === 'SPEC-001')!;
+    assert.equal(documentType(spec.data), 'spec');
   });
 });
 
