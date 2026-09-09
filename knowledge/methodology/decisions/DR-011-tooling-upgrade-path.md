@@ -26,13 +26,14 @@ superseded_by: []
 - **Files are classified by owner.** Framework-owned: `tools/knowledge-check.mts`, `tools/knowledge-context.mts`, `tools/drift-gate.mts`, `tools/knowledge-hook.mts`, `.github/workflows/kde.yml`, and the KDE hook entries inside `.claude/settings.json`. Adopter-owned: everything under `knowledge/`, `templates/`, `AGENTS.md`, and `package.json` beyond the KDE script entries. New tools the framework adds join the framework-owned list in the same change that introduces them.
 - **`install.sh --upgrade` overwrites framework-owned files** with the fetched version and reports each replacement. Without the flag the installer behaves as today: it adds what is missing and never overwrites.
 - **Templates are adopter-owned without exception.** They are copied on first install and never refreshed, modified or not. The framework's contract with an adopting repository is KDE-SPEC-001 and the validator, not the template text; a spec change that adds a required section surfaces as a validator error, and new template files are added by a plain installer run because they do not exist yet.
-- **Framework-owned files carry a `# kde-version:` marker line.** The installer compares the marker in the repository with the fetched version on every run and warns when they differ, with or without `--upgrade`. The warning names the flag.
+- **Framework-owned files carry a `kde-version: X.Y.Z` marker** on their first line, as a comment in the file's own syntax (`//` in the tools, `#` in the workflow); hook entries in `.claude/settings.json` are JSON and carry none — they are re-merged idempotently instead. The installer stamps the marker when it copies a file and, on every run, compares each installed file with the fetched version; it warns when any differs, with or without `--upgrade`, and the warning names the flag.
+- **The version is `package.json` `version` in this repository**, starting at `0.1.0`. It is bumped in the same change that alters any file the installer copies (`tools/`, `install.sh`, `.claude/settings.json`); CI rejects such a change without a bump, because an unbumped fix is invisible to adopters — exactly the field failure that motivated KDE-RFC-003. `KDE_REF` accepts a tag, so an install can pin a release.
 - Distributing the tools as a package instead of copying them is a separate proposal, KDE-RFC-010. Until it is decided, this decision is the upgrade path.
 
 ## Consequences
 
-- `install.sh` gains the `--upgrade` flag, the owner classification, the marker comparison and the warning; the tools and the CI workflow gain the marker line. The source of the version identifier (a version file in this repository or the fetched commit) is settled at implementation; the marker format is fixed by this record.
-- ADOPTING.md documents `--upgrade` and the warning.
+- `install.sh` gains the `--upgrade` flag, the owner classification, the marker stamping and comparison, and the warning; this repository's CI gains the version-bump guard; CONTRIBUTING.md records the bump rule.
+- ADOPTING.md documents `--upgrade`, the owner split and the warning.
 - Adopters with local edits to a framework-owned file lose them on `--upgrade`; the per-file report is how they notice. Local edits belong in adopter-owned files or in a proposal upstream.
 - If KDE-RFC-010 is accepted, the flag and the marker are retired in favour of the dependency version, and this record is superseded.
 

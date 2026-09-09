@@ -37,5 +37,6 @@ Review affected specs, flows, IA, design-system docs, prompts, templates, and ex
 - Avoid duplicating rationale across files.
 - Update templates when metadata or artifact semantics change.
 - Update examples when a reader would otherwise learn the old pattern.
+- Bump `version` in `package.json` (`npm version patch --no-git-tag-version`) whenever you change a file the installer copies into adopting repositories — anything under `tools/`, `install.sh`, or `.claude/settings.json`. Adopters learn a fix exists through the version marker, so an unbumped fix is invisible to them; CI rejects the PR otherwise (DR-011).
 - Run `npm run knowledge:check`.
 

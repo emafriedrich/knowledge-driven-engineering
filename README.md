@@ -15,7 +15,7 @@ npm run knowledge:check
 
 Then seed current truth: copy `templates/decision-record.md` into `knowledge/<your-first-domain>/decisions/`, record one decision your team already made, and list it in that domain's `decisions/index.yaml`.
 
-The installer is idempotent and never overwrites existing files. It adds the validator and companion tools, the templates, a domain scaffold, a CI workflow, Claude Code hooks, and a KDE section in your `AGENTS.md`. Details in [ADOPTING.md](ADOPTING.md).
+The installer is idempotent and never overwrites existing files. It adds the validator and companion tools, the templates, a domain scaffold, a CI workflow, Claude Code hooks, and a KDE section in your `AGENTS.md`. Re-run it with `--upgrade` to refresh the framework-owned tools after a release; your knowledge, templates and agent rules are never touched. Details in [ADOPTING.md](ADOPTING.md).
 
 ## Core Thesis
 
