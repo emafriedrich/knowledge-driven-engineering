@@ -57,7 +57,7 @@ test('installer stamps framework-owned files with the package.json version and r
 
     const upgraded = install(root, '--upgrade');
     assert.match(upgraded, new RegExp(`upgrade tools/knowledge-check\\.mts \\(0\\.0\\.9 -> ${version.replace(/\./g, '\\.')}\\)`));
-    assert.match(upgraded, /upgrade tools\/drift-gate\.mts \(local edits at /);
+    assert.match(upgraded, /WARN {2}tools\/drift-gate\.mts had local edits; overwritten with kde /);
     assert.match(upgraded, /skip {2}templates\/rfc\.md/);
     assert.doesNotMatch(upgraded, /WARN {2}framework-owned/);
     assert.equal(firstLine(check), `// kde-version: ${version}`);

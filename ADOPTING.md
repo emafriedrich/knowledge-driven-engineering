@@ -41,7 +41,7 @@ Every run compares the installed markers with the fetched version and warns when
 curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/main/install.sh | bash -s -- --upgrade
 ```
 
-`--upgrade` replaces framework-owned files that differ and reports each one (`upgrade tools/knowledge-check.mts (0.1.0 -> 0.2.0)`). Local edits to a framework-owned file are lost on upgrade — that per-file line is how you notice. Edits that should survive belong in adopter-owned files, or upstream as a proposal. Adopter-owned files are not touched by `--upgrade` either. New template files that a release adds (as `templates/model.md` and `templates/contract.md` were) arrive on a plain run, because the installer adds any file that does not exist yet.
+`--upgrade` replaces framework-owned files that differ and reports each one (`upgrade tools/knowledge-check.mts (0.1.0 -> 0.2.0)`). A framework-owned file you edited locally is overwritten too, with an explicit `WARN` line naming it. Framework-owned files are not an extension point: if you need different validation behaviour, fork this repository and install from your fork; if the change would help everyone, contributions are welcome. Adopter-owned files are not touched by `--upgrade`. New template files that a release adds (as `templates/model.md` and `templates/contract.md` were) arrive on a plain run, because the installer adds any file that does not exist yet.
 
 ## Manual Steps
 
