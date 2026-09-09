@@ -32,7 +32,7 @@ curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engin
 
 The installer classifies what it writes by owner (DR-011):
 
-- **Framework-owned** — `tools/knowledge-check.mts`, `tools/knowledge-context.mts`, `tools/drift-gate.mts`, `tools/knowledge-hook.mts`, `.github/workflows/kde.yml`, and the KDE hook entries in `.claude/settings.json`. Every copy carries a `kde-version: X.Y.Z` marker on its first line.
+- **Framework-owned** — `tools/knowledge-check.mts`, `tools/knowledge-context.mts`, `tools/knowledge.mts`, `tools/drift-gate.mts`, `tools/knowledge-hook.mts`, `.github/workflows/kde.yml`, and the KDE hook entries in `.claude/settings.json`. Every copy carries a `kde-version: X.Y.Z` marker on its first line.
 - **Adopter-owned** — everything under `knowledge/`, `templates/`, `AGENTS.md`, and your `package.json` beyond the two KDE scripts. Never touched, on any run. Templates are yours to shape to your team's conventions; the validator, not the template text, enforces KDE-SPEC-001.
 
 Every run compares the installed markers with the fetched version and warns when a framework-owned file differs — whether from a newer release upstream or a local edit. To refresh them:
@@ -58,6 +58,20 @@ curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engin
 5. **Add the agent rules.** Copy the Retrieval Order, Precedence, and Hard Rules sections of this repository's `AGENTS.md` into your project's `AGENTS.md` or `CLAUDE.md`, adjusting domain names.
 6. **Seed current truth.** Write the first Decision Record for a decision your team already made, list it in the domain `decisions/index.yaml`, and anchor the domain in `knowledge/index.yaml`. One real decision beats ten empty folders.
 7. **Grow on demand.** Add artifact folders (`specs/`, `flows/`, `rfcs/`) only when the domain has real content of that type, and new domains only when work needs a stable retrieval boundary.
+
+## Lifecycle Commands
+
+`npm run knowledge -- <command>` performs each lifecycle transition as one step and leaves the repository valid or explains why it refused:
+
+```bash
+npm run knowledge -- domain add orders --description "Order lifecycle" --code-paths src/orders/
+npm run knowledge -- new decision orders "Orders are immutable after payment" --author <you>
+npm run knowledge -- promote DR-001 --by <you>
+npm run knowledge -- supersede DR-001 --by DR-002 --approved-by <you>
+npm run knowledge -- renumber DR-002 DR-010
+```
+
+Agents use `new`, `domain add` and `renumber` (with `--by agent` on what they draft); `promote` and `supersede` are for humans, and the AGENTS.md section the installer writes says so. Ids are allocated by scanning the catalog and git history; when two branches still collide, the validator reports the duplicate and `renumber` fixes it in one command.
 
 ## Harness Enforcement (Optional)
 

@@ -31,10 +31,10 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 | model-and-contract-artifacts | DR-010 | Models and contracts are first-class artifacts bound to specs and code | 2026-09-08 |
 | tooling-upgrade-path | DR-011 | The installer refreshes framework-owned files on request and reports version skew always | 2026-09-09 |
 | lighter-frontmatter | DR-012 | Six frontmatter fields are always required; the rest default or are gated | 2026-09-09 |
+| lifecycle-commands | DR-013 | Lifecycle transitions are commands that leave the repository valid or refuse | 2026-09-09 |
 
 ## Pending — NOT current truth, do not obey
 
-- `KDE-RFC-006` (draft, agent-drafted): Lifecycle commands for creating, promoting and superseding knowledge
 - `KDE-RFC-008` (draft, agent-drafted): External systems as signals and mirrors, never as canonical stores
 - `KDE-RFC-009` (draft, agent-drafted): Declared implementation against drafts and executable acceptance checks
 - `KDE-RFC-010` (draft, agent-drafted): Distribute framework tooling as an npm package

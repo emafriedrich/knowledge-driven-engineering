@@ -202,6 +202,18 @@ flowchart TD
 
 Operational learning can update a spec, add a playbook, or trigger a new RFC. Use a new RFC when learning changes behavior, cross-domain contracts, or a prior decision.
 
+### Lifecycle Commands
+
+Every transition above is one command (DR-013); each ends by running the validator and refreshing the domain manifests, and the transitions roll back if they would leave an error behind.
+
+- `npm run knowledge -- new <type> <domain> "<title>" [--by agent] [--author <name>]` — copy the template, allocate the next id in the domain's own prefix, fill the metadata.
+- `npm run knowledge -- promote <ID> --by <human> [--topic <name>]` — set the active status, record the approver, index a decision under its topic. Refused, with the validator's reason, when the document is not ready.
+- `npm run knowledge -- supersede <OLD-ID> --by <NEW-ID> [--approved-by <human>]` — link both records, re-point or retire the topic, promote a draft replacement, list the documents that depend on the old one.
+- `npm run knowledge -- domain add <name> --description "<text>" [--code-paths a/ b/]` — directory, README, empty decision index, catalog entry, manifest.
+- `npm run knowledge -- renumber <OLD-ID> <NEW-ID>` — rewrite an id everywhere at once when two branches allocated the same number.
+
+Agents create and renumber; only humans promote and supersede.
+
 ## Change Propagation
 
 When a decision changes:
@@ -212,6 +224,8 @@ When a decision changes:
 4. Search for documents with `depends_on` pointing at the changed record.
 5. Review affected specs, flows, IA, design-system docs, prompts, and tasks.
 6. Update implementation tasks after canonical knowledge changes.
+
+`npm run knowledge -- supersede <OLD-ID> --by <NEW-ID> --approved-by <you>` performs steps 2 and 3 and prints the list for step 4.
 
 When a spec changes, review implementation and tests. Create a Decision Record only if the change records an important product, UX, design, architecture, security, infrastructure, or business decision.
 

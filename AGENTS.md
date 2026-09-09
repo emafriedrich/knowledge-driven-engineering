@@ -66,6 +66,8 @@ Create or update a task only after the canonical knowledge that justifies it exi
 - Do not treat existing implementation as current truth when canonical knowledge says otherwise.
 - Report conflicts between code and knowledge before changing behavior.
 - Keep prompts short and reference canonical IDs or paths.
-- Create knowledge documents by copying the matching template in `templates/`.
-- After changing knowledge artifacts, run `npm run knowledge:check` and refresh manifests with `npm run knowledge:context -- --write`.
+- Create knowledge documents with `npm run knowledge -- new <type> <domain> "<title>" --by agent`; add a missing domain with `npm run knowledge -- domain add <name> --description "<text>"`. Both run the validator and refresh manifests.
+- Never run `knowledge promote` or `knowledge supersede`. Promotion is human-only; tell the human the command instead.
+- Resolve an id collision with `npm run knowledge -- renumber <OLD-ID> <NEW-ID>`, not by hand.
+- After editing knowledge artifacts directly, run `npm run knowledge:check` and refresh manifests with `npm run knowledge:context -- --write`.
 

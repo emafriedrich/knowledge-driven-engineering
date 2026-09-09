@@ -12,3 +12,4 @@ current:
   model-and-contract-artifacts: DR-010
   tooling-upgrade-path: DR-011
   lighter-frontmatter: DR-012
+  lifecycle-commands: DR-013

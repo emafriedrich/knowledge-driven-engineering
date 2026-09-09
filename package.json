@@ -1,12 +1,13 @@
 {
   "name": "knowledge-driven-engineering",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
     "knowledge:check": "node --experimental-strip-types tools/knowledge-check.mts",
     "test": "node --test --experimental-strip-types tests/*.test.ts",
-    "knowledge:context": "node --experimental-strip-types tools/knowledge-context.mts"
+    "knowledge:context": "node --experimental-strip-types tools/knowledge-context.mts",
+    "knowledge": "node --experimental-strip-types tools/knowledge.mts"
   },
   "dependencies": {
     "yaml": "^2.9.0"

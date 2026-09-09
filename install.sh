@@ -105,7 +105,7 @@ fi
 # --- Tools and templates -----------------------------------------------------
 mkdir -p tools templates
 
-for f in knowledge-check.mts knowledge-context.mts drift-gate.mts knowledge-hook.mts; do
+for f in knowledge-check.mts knowledge-context.mts knowledge.mts drift-gate.mts knowledge-hook.mts; do
   framework_file '//' "$SRC/tools/$f" "tools/$f"
 done
 
@@ -179,10 +179,11 @@ if [ ! -e package.json ]; then
 fi
 if npm pkg set \
   'scripts.knowledge:check=node --experimental-strip-types tools/knowledge-check.mts' \
-  'scripts.knowledge:context=node --experimental-strip-types tools/knowledge-context.mts' >/dev/null 2>&1; then
-  say "  set   package.json scripts (knowledge:check, knowledge:context)"
+  'scripts.knowledge:context=node --experimental-strip-types tools/knowledge-context.mts' \
+  'scripts.knowledge=node --experimental-strip-types tools/knowledge.mts' >/dev/null 2>&1; then
+  say "  set   package.json scripts (knowledge:check, knowledge:context, knowledge)"
 else
-  say "  WARN  could not set package.json scripts; add knowledge:check and knowledge:context manually"
+  say "  WARN  could not set package.json scripts; add knowledge:check, knowledge:context and knowledge manually"
 fi
 
 # --- CI ----------------------------------------------------------------------
@@ -291,7 +292,8 @@ When sources disagree: active Decision Record > current Specification > other do
 - Do not invent product behavior.
 - Declare \`drafted_by: agent\` on every knowledge document you draft.
 - Never set a document you drafted to \`accepted\`, \`current\`, or \`implemented\`. Promotion is human-only.
-- Create knowledge documents by copying the matching template in \`templates/\`.
+- Create knowledge documents with \`npm run knowledge -- new <type> <domain> "<title>" --by agent\` (a missing domain: \`npm run knowledge -- domain add <name> --description "<text>"\`).
+- Never run \`knowledge promote\` or \`knowledge supersede\`: promotion is human-only.
 - Run \`npm run knowledge:check\` after changing knowledge artifacts.
 <!-- kde:end -->
 AGENTSBLOCK
@@ -334,8 +336,9 @@ fi
 say ""
 say "Done. Next steps:"
 say "  1. npm run knowledge:check"
-say "  2. Seed current truth: copy templates/decision-record.md into knowledge/${DOMAIN:-<domain>}/decisions/,"
-say "     record one decision your team already made, and list it in decisions/index.yaml."
+say "  2. Seed current truth with one decision your team already made:"
+say "       npm run knowledge -- new decision ${DOMAIN:-<domain>} \"<title>\" --author <you>"
+say "       npm run knowledge -- promote <ID> --by <you>"
 say "  3. Enable branch protection with code-owner review so knowledge promotion needs a human."
 say ""
 say "Full guide: ${REPO_URL}/blob/main/ADOPTING.md"

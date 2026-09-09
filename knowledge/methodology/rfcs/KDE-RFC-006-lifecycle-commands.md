@@ -1,17 +1,17 @@
 ---
 id: KDE-RFC-006
 title: Lifecycle commands for creating, promoting and superseding knowledge
-status: draft
+status: implemented
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 authors: [engineering]
 drafted_by: agent
-approved_by: []
+approved_by: [emafriedrich]
 motivated_by: Field use — the adopter approved a Decision Record and did not know how to promote it in their own framework; an agent had to scaffold eight domains through a shell loop because the write hook validates each file and scopes must exist before any document can name them
 scope: [methodology]
 tags: [rfc, tooling]
 depends_on: [KDE-SPEC-001]
-related: [KDE-RFC-003, KDE-RFC-004, DR-007, DR-009, KDE-FLOW-001]
+related: [KDE-RFC-003, KDE-RFC-004, DR-007, DR-009, DR-011, DR-013, KDE-FLOW-001]
 ---
 
 # RFC: Lifecycle Commands For Creating, Promoting And Superseding Knowledge
@@ -48,10 +48,12 @@ Error messages of the validator gain a hint line pointing at the command that fi
 
 ## Open Questions
 
-- Should `promote` refuse to run on the default branch, forcing the transition through a pull request where CODEOWNERS applies?
-- Id allocation: is a git-aware scan enough, or should ids be allocated from a small counter file that merges cleanly?
-- Should the command live inside the installer (KDE-RFC-003 upgrade path) so adopting repositories receive it without a new install?
+All three resolved at review (2026-09-09):
+
+- No branch restriction, not even a warning. The command edits files exactly as an editor would; whether a change to `main` needs review is the repository's branch protection to decide, and a command that refuses gets bypassed by hand — the status quo this RFC exists to end.
+- A git-aware scan allocates ids; no counter file. Collisions are rare, the validator already reports them at merge, and a `renumber <OLD> <NEW>` subcommand rewrites the id everywhere in one step — so the fix is tooling, not an agent spending tokens on search-and-replace.
+- Via the installer: `tools/knowledge.mts` is framework-owned under DR-011, so `install.sh` adds it to existing repositories and `--upgrade` refreshes it; the installer also sets the `knowledge` script in `package.json`.
 
 ## Outcome
 
-Pending review.
+Accepted and implemented on 2026-09-09. Decision recorded in DR-013. Shipped `tools/knowledge.mts` with `new`, `promote`, `supersede`, `domain add` and `renumber`; validator hints that name the fixing command; a validator error for unfilled template placeholders; installer, AGENTS section, HANDBOOK and ADOPTING updates; tests. Two behaviours settled during implementation: `promote` and `supersede` roll back whenever an error remains on a file they touched (a document cannot be promoted around its own error), and `supersede` promotes a draft replacement with `--approved-by` under the old record's topic, or retires the old topic when the replacement already stands under its own (the DR-001 → DR-004 precedent).
