@@ -8,6 +8,8 @@ type Frontmatter = Record<string, unknown>;
 type DocumentRecord = {
   file: string;
   data: Frontmatter;
+  // Body after the frontmatter; some artifact types (models) are validated on content.
+  content: string;
 };
 
 export type CheckResult = {
@@ -34,7 +36,22 @@ const REFERENCE_FIELDS = ['related', 'depends_on', 'supersedes', 'superseded_by'
 const REQUIRED_FIELDS = ['id', 'title', 'status', 'created', 'updated', 'authors', 'scope', 'tags', 'depends_on', 'related'];
 // Every document must carry exactly one artifact type tag. The type drives
 // validation rules; ID patterns are not a reliable type signal.
-const TYPE_TAGS = new Set(['vision', 'rfc', 'decision', 'spec', 'flow', 'ia', 'design-system', 'prompt', 'task', 'playbook']);
+const TYPE_TAGS = new Set([
+  'vision',
+  'rfc',
+  'decision',
+  'spec',
+  'flow',
+  'ia',
+  'design-system',
+  'model',
+  'contract',
+  'prompt',
+  'task',
+  'playbook',
+]);
+// A model's primary content is its diagram (DR-010).
+const MERMAID_BLOCK = /```mermaid\b/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 // Gate 6 (DR-007): agent drafts older than this are reported for archiving.
 const AGENT_DRAFT_EXPIRY_DAYS = 30;
@@ -228,7 +245,8 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
   const ids = new Map<string, DocumentRecord>();
 
   for (const file of markdownFiles) {
-    const data = parseFrontmatter(readFileSync(file, 'utf8'));
+    const content = readFileSync(file, 'utf8');
+    const data = parseFrontmatter(content);
 
     if (!data) {
       // A knowledge document the parser cannot see is a silent integrity hole:
@@ -237,7 +255,7 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
       continue;
     }
 
-    const document = { file, data };
+    const document = { file, data, content };
     documents.push(document);
 
     const id = data.id;
@@ -297,6 +315,16 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
       errors.push(`${relative(root, document.file)} is superseded but has no superseded_by target`);
     }
 
+    // A contract's `implements` paths are the code it obliges (DR-010); a
+    // path that does not exist is a contract about nothing.
+    if (documentType(document.data) === 'contract') {
+      for (const implementedPath of values(document.data, 'implements')) {
+        if (!existsSync(join(root, implementedPath)) && !existsSync(join(dirname(document.file), implementedPath))) {
+          errors.push(`${relative(root, document.file)} implements missing path ${implementedPath}`);
+        }
+      }
+    }
+
     for (const supersededId of values(document.data, 'supersedes')) {
       const superseded = ids.get(supersededId);
       if (!superseded) continue;
@@ -331,21 +359,36 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
       errors.push(`${file} is agent-drafted with status ${status} but has empty approved_by`);
     }
 
-    if (CURRENT_TRUTH_STATUSES.has(status) && (type === 'spec' || type === 'flow' || type === 'ia')) {
+    const anchoredTypes = type === 'spec' || type === 'flow' || type === 'ia' || type === 'model' || type === 'contract';
+
+    if (CURRENT_TRUTH_STATUSES.has(status) && anchoredTypes) {
       const anchored = values(data, 'depends_on').some((reference) => {
         const anchor = ids.get(reference);
         if (!anchor) return false;
 
         const anchorType = documentType(anchor.data);
         const anchorStatus = String(anchor.data.status);
+        const currentSpec = anchorType === 'spec' && CURRENT_TRUTH_STATUSES.has(anchorStatus);
+        // A contract exposes a spec's behavior, so only a current spec anchors it (DR-010).
+        if (type === 'contract') return currentSpec;
         if (anchorType === 'decision' && ACTIVE_DECISION_STATUSES.has(anchorStatus)) return true;
-        // Flows and IA may hang off a current spec instead of a decision.
-        return type !== 'spec' && anchorType === 'spec' && CURRENT_TRUTH_STATUSES.has(anchorStatus);
+        // Flows, IA and models may hang off a current spec instead of a decision.
+        return type !== 'spec' && currentSpec;
       });
 
       if (!anchored) {
-        const expected = type === 'spec' ? 'an active decision' : 'an active decision or current spec';
+        const expected =
+          type === 'spec' ? 'an active decision' : type === 'contract' ? 'a current spec' : 'an active decision or current spec';
         errors.push(`${file} has status ${status} but does not depend on ${expected}`);
+      }
+    }
+
+    if (type === 'model' && !MERMAID_BLOCK.test(document.content)) {
+      const message = `${file} is a model without a mermaid diagram block`;
+      if (CURRENT_TRUTH_STATUSES.has(status)) {
+        errors.push(message);
+      } else {
+        warnings.push(message);
       }
     }
 

@@ -9,3 +9,4 @@ current:
   agent-authored-knowledge-gates: DR-007
   drift-verification: DR-008
   domain-context-manifests: DR-009
+  model-and-contract-artifacts: DR-010

@@ -1,7 +1,10 @@
 // PR drift gate (DR-008): code changes mapped to a domain with a current spec
 // must touch that domain's knowledge or declare no-behavior-change in the PR body.
+// Contract obligation (DR-010): code under a current contract's `implements`
+// paths must change together with the contract, or declare no-behavior-change.
 import { execSync } from 'node:child_process';
-import { checkKnowledge, documentType, loadCatalogs } from './knowledge-check.mts';
+import { relative } from 'node:path';
+import { checkKnowledge, documentType, loadCatalogs, values } from './knowledge-check.mts';
 
 const root = process.cwd();
 const baseRef = process.env.DRIFT_BASE_REF ?? 'origin/main';
@@ -59,6 +62,32 @@ for (const catalog of catalogs) {
         `Update the domain's knowledge, or add "no-behavior-change" to the PR description.`,
       );
     }
+  }
+}
+
+const CURRENT_TRUTH = new Set(['accepted', 'implemented', 'current']);
+const changedSet = new Set(changed);
+
+for (const document of documents) {
+  if (documentType(document.data) !== 'contract' || !CURRENT_TRUTH.has(String(document.data.status))) continue;
+
+  const implementedPaths = values(document.data, 'implements');
+  const codeChanged = changed.filter((file) => implementedPaths.some((prefix) => matchesPrefix(file, prefix)));
+  if (codeChanged.length === 0) continue;
+
+  const id = String(document.data.id);
+  const contractFile = relative(root, document.file);
+
+  if (changedSet.has(contractFile)) {
+    console.log(`drift-gate: contract ${id} — implementation and contract changed together. OK.`);
+  } else if (declared) {
+    console.log(`drift-gate: contract ${id} — implementation changed, no-behavior-change declared. OK.`);
+  } else {
+    failures.push(
+      `contract ${id}: ${codeChanged.length} file(s) it implements changed (${codeChanged.slice(0, 5).join(', ')}) ` +
+      `but ${contractFile} was not updated. ` +
+      `Update the contract, or add "no-behavior-change" to the PR description.`,
+    );
   }
 }
 
