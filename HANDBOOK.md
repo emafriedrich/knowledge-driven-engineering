@@ -69,6 +69,10 @@ Answers: What behavior must implementation satisfy?
 
 Use specs for current expected behavior and constraints. A spec should be precise enough that an implementation agent can act without inventing product rules.
 
+A spec's Acceptance Checks may be backed by an `acceptance` fenced block: shell commands, one per line, that prove them — normally an invocation of the project's own test suite, so they run wherever the tests run. `npm run knowledge -- accept <SPEC-ID>` runs the block; a spec reaches `implemented` only through `promote --to implemented`, which runs it first and refuses on failure, and CI re-runs it for specs promoted in a pull request (DR-015). Passing checks are evidence; the promotion is still a human's.
+
+Implementing against a spec that is still a draft is normal parallel work and must be declared, not hidden: `implements-draft: <SPEC-ID>` in the pull request description satisfies the drift gate for a domain whose specs are drafts. The declaration is visibility, not permission.
+
 ### User Flow
 
 Answers: How does a user move through a capability?
@@ -217,6 +221,7 @@ Every transition above is one command (DR-013); each ends by running the validat
 - `npm run knowledge -- domain add <name> --description "<text>" [--code-paths a/ b/]` — directory, README, empty decision index, catalog entry, manifest.
 - `npm run knowledge -- renumber <OLD-ID> <NEW-ID>` — rewrite an id everywhere at once when two branches allocated the same number.
 - `npm run knowledge -- done <TASK-ID> [--by <name>]` — close a task; names its tracker ticket when it has one.
+- `npm run knowledge -- accept <SPEC-ID>` — run a spec's acceptance block; `promote <SPEC-ID> --by <human> --to implemented` runs it and promotes only if it passes.
 
 Agents create and renumber; only humans promote and supersede.
 

@@ -30,4 +30,11 @@ related: []
 
 ## Acceptance Checks
 
-<!-- List observable checks an implementation agent or reviewer can run. -->
+<!-- List observable checks an implementation agent or reviewer can run. The
+     `acceptance` fence below holds the commands that prove them — normally the
+     project's own tests. `npm run knowledge -- accept <ID>` runs it, and the
+     spec cannot become `implemented` unless it passes. -->
+
+```acceptance
+npm test -- --grep "<capability>"
+```

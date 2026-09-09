@@ -70,7 +70,11 @@ npm run knowledge -- promote DR-001 --by <you>
 npm run knowledge -- supersede DR-001 --by DR-002 --approved-by <you>
 npm run knowledge -- renumber DR-002 DR-010
 npm run knowledge -- done TASK-004
+npm run knowledge -- accept SPEC-001
+npm run knowledge -- promote SPEC-001 --by <you> --to implemented
 ```
+
+The CI workflow the installer writes runs the drift gate on pull requests — code changes in a domain must come with a knowledge change, a `no-behavior-change` declaration, or, when the domain's specs are still drafts, an `implements-draft: <SPEC-ID>` declaration — and re-runs the acceptance block of any spec a pull request promotes to `implemented`.
 
 Agents use `new`, `domain add` and `renumber` (with `--by agent` on what they draft); `promote` and `supersede` are for humans, and the AGENTS.md section the installer writes says so. Ids are allocated by scanning the catalog and git history; when two branches still collide, the validator reports the duplicate and `renumber` fixes it in one command.
 

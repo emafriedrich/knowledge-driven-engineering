@@ -80,6 +80,10 @@ A domain entry in `knowledge/index.yaml` may declare `code_paths`: plain reposit
 
 A domain entry may declare `trackers`: a map from tracker system to the key that holds the domain's tasks (`trackers: { jira: PD }`), so an agent can resolve "the tracker for `orders`" from the catalog instead of from a prompt (DR-014).
 
+When a domain's specs are all drafts, the drift gate requires the pull request to declare `implements-draft: <SPEC-ID>` (or `no-behavior-change`) — implementing against a draft is allowed and visible, and the spec still needs promotion (DR-015). The declaration also satisfies the gate for a domain that has a current spec.
+
+A spec may carry an `acceptance` fenced block of shell commands, one per line, that prove its Acceptance Checks; `knowledge accept` runs them, `promote --to implemented` runs them first and refuses on failure, and CI re-runs them for specs promoted in a pull request. `implemented` therefore means the checks passed at the promoting commit (DR-015).
+
 The drift gate also enforces contract obligations (DR-010): when files under a current Contract's `implements` paths change and the contract file does not, the pull request must declare `no-behavior-change` or the gate fails.
 
 ## Validation Scope

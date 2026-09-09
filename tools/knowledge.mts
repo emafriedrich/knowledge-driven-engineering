@@ -4,11 +4,12 @@
 // files; authority stays with the reviewed diff.
 //
 //   knowledge new <type> <domain> "<title>" [--by human|agent] [--author <name>] [--prefix <P>]
-//   knowledge promote <ID> --by <human> [--topic <name>]
-//   knowledge supersede <OLD-ID> --by <NEW-ID>
+//   knowledge promote <ID> --by <human> [--topic <name>] [--to implemented]
+//   knowledge supersede <OLD-ID> --by <NEW-ID> [--approved-by <human>]
 //   knowledge domain add <name> --description "<text>" [--code-paths a/ b/] [--catalog <file>]
 //   knowledge renumber <OLD-ID> <NEW-ID>
 //   knowledge done <TASK-ID> [--by <name>]
+//   knowledge accept <SPEC-ID> | --promoted <base-ref>
 //
 // Every command ends by running the validator and rewriting manifests, so the
 // repository never leaves a command in a state the validator would reject
@@ -300,7 +301,7 @@ export function commandNew(
 
 // --- promote --------------------------------------------------------------------
 
-export function commandPromote(root: string, id: string, options: { by?: string; topic?: string }): CommandResult {
+export function commandPromote(root: string, id: string, options: { by?: string; topic?: string; to?: string }): CommandResult {
   if (!options.by) throw new CommandError('promote requires --by <human>: promotion is human-only (DR-007)');
   const { document } = findDocument(root, id);
   const type = documentType(document.data);
@@ -308,8 +309,24 @@ export function commandPromote(root: string, id: string, options: { by?: string;
   if (!type || !spec || !spec.active) {
     throw new CommandError(`${id} is a ${type ?? 'untyped'} document; promote handles ${Object.entries(TYPES).filter(([, entry]) => entry.active).map(([name]) => name).join(', ')}`);
   }
+  if (options.to !== undefined && options.to !== 'implemented') throw new CommandError(`--to accepts only implemented (the active status is the default)`);
+  const target = options.to ?? spec.active;
+  if (options.to === 'implemented' && !['spec', 'rfc', 'decision'].includes(type)) {
+    throw new CommandError(`${type} documents are ${spec.active} at most; implemented applies to specs, RFCs and decisions`);
+  }
   const status = String(document.data.status);
-  if (status === spec.active) return { changed: [], notes: [`${id} is already ${status}`] };
+  if (status === target) return { changed: [], notes: [`${id} is already ${status}`] };
+  const acceptance: string[] = [];
+  if (options.to === 'implemented' && type === 'spec') {
+    // `implemented` earns its meaning (DR-015): the spec's acceptance block must pass here and now.
+    const commands = acceptanceCommands(document.content);
+    if (!commands) {
+      throw new CommandError(`${id} has no acceptance block; add a \`\`\`acceptance fence with the commands that prove it (usually the project's own tests) before marking it implemented`);
+    }
+    const run = runAcceptance(root, commands);
+    acceptance.push(...run.lines);
+    if (!run.passed) throw new CommandError(`promote refused: acceptance checks of ${id} failed\n${run.lines.join('\n')}`);
+  }
   if (status === 'superseded' || status === 'rejected' || status === 'archived') {
     throw new CommandError(`${id} is ${status}; closed documents are not promoted`);
   }
@@ -335,7 +352,7 @@ export function commandPromote(root: string, id: string, options: { by?: string;
 
   const approvers = values(document.data, 'approved_by');
   if (!approvers.includes(options.by)) approvers.push(options.by);
-  setField(doc.front, 'status', spec.active);
+  setField(doc.front, 'status', target);
   setField(doc.front, 'updated', today());
   setField(doc.front, 'approved_by', yamlList(approvers), ['drafted_by', 'authors', 'updated']);
   if (values(document.data, 'authors').length === 0) setField(doc.front, 'authors', yamlList([options.by]), ['updated']);
@@ -359,6 +376,7 @@ export function commandPromote(root: string, id: string, options: { by?: string;
 
   const changed = [...touched.map((file) => relative(root, file)), ...writeManifests(root)];
   if (topic) notes.push(`decision index topic: ${topic}`);
+  if (acceptance.length > 0) notes.push(`acceptance checks passed:`, ...acceptance);
   return { changed, notes };
 }
 
@@ -635,6 +653,79 @@ export function commandDone(root: string, id: string, options: { by?: string } =
   return { changed: [relative(root, document.file), ...writeManifests(root)], notes };
 }
 
+// --- accept ---------------------------------------------------------------------
+// A spec may carry a ```acceptance fence: shell commands, one per line, that
+// prove its Acceptance Checks — normally the project's own tests, so they run
+// wherever the tests run. The framework runs them; it never provisions anything.
+
+export function acceptanceCommands(content: string): string[] | null {
+  const match = /^```acceptance[ \t]*\r?\n([\s\S]*?)^```[ \t]*$/m.exec(content);
+  if (!match) return null;
+  return match[1]
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'));
+}
+
+export function runAcceptance(root: string, commands: string[]): { passed: boolean; lines: string[] } {
+  const lines: string[] = [];
+  let passed = true;
+  for (const command of commands) {
+    try {
+      execSync(command, { cwd: root, stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8', shell: '/bin/sh' });
+      lines.push(`  ok    ${command}`);
+    } catch (error) {
+      passed = false;
+      const output = [(error as { stdout?: string }).stdout, (error as { stderr?: string }).stderr].filter(Boolean).join('\n').trim();
+      const tail = output.split('\n').slice(-5).map((line) => `        ${line}`).join('\n');
+      lines.push(`  FAIL  ${command}${tail ? `\n${tail}` : ''}`);
+    }
+  }
+  return { passed, lines };
+}
+
+export function commandAccept(root: string, target: { id?: string; promotedSince?: string }): CommandResult {
+  const { documents } = checkKnowledge(root);
+  let specs = documents.filter((document) => documentType(document.data) === 'spec');
+  const notes: string[] = [];
+
+  if (target.id) {
+    const document = specs.find((entry) => String(entry.data.id) === target.id);
+    if (!document) throw new CommandError(`no cataloged spec has id ${target.id}`);
+    specs = [document];
+  } else if (target.promotedSince) {
+    // CI mode: only specs whose status became implemented since the base ref.
+    specs = specs.filter((document) => {
+      if (String(document.data.status) !== 'implemented') return false;
+      try {
+        const previous = execSync(`git show "${target.promotedSince}":"${relative(root, document.file)}"`, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+        return !/^status:\s*implemented\s*$/m.test(previous);
+      } catch {
+        return true; // new file: implemented from the start still has to prove it
+      }
+    });
+    if (specs.length === 0) return { changed: [], notes: [`no spec moved to implemented since ${target.promotedSince}`] };
+  } else {
+    throw new CommandError('accept needs a <SPEC-ID> or --promoted <base-ref>');
+  }
+
+  const failed: string[] = [];
+  for (const document of specs) {
+    const id = String(document.data.id);
+    const commands = acceptanceCommands(document.content);
+    if (!commands) {
+      notes.push(`${id}: no acceptance block`);
+      if (target.promotedSince) failed.push(`${id} is implemented without an acceptance block`);
+      continue;
+    }
+    const run = runAcceptance(root, commands);
+    notes.push(`${id}:`, ...run.lines);
+    if (!run.passed) failed.push(`${id} failed acceptance`);
+  }
+  if (failed.length > 0) throw new CommandError(`${notes.join('\n')}\naccept failed: ${failed.join('; ')}`);
+  return { changed: [], notes };
+}
+
 // --- CLI ------------------------------------------------------------------------
 
 function parseArgs(args: string[]): { positional: string[]; flags: Record<string, string[]> } {
@@ -656,11 +747,12 @@ function parseArgs(args: string[]): { positional: string[]; flags: Record<string
 
 const USAGE = `usage:
   knowledge new <type> <domain> "<title>" [--by human|agent] [--author <name>] [--prefix <P>]
-  knowledge promote <ID> --by <human> [--topic <name>]
+  knowledge promote <ID> --by <human> [--topic <name>] [--to implemented]
   knowledge supersede <OLD-ID> --by <NEW-ID> [--approved-by <human>]   (promotes a draft NEW-ID)
   knowledge domain add <name> --description "<text>" [--code-paths a/ b/] [--catalog knowledge/index.yaml]
   knowledge renumber <OLD-ID> <NEW-ID>
   knowledge done <TASK-ID> [--by <name>]
+  knowledge accept <SPEC-ID> | --promoted <base-ref>
 types: ${Object.keys(TYPES).join(', ')}`;
 
 export function commandName(argv: string[]): string | undefined {
@@ -678,7 +770,7 @@ export function run(root: string, argv: string[]): CommandResult {
       return commandNew(root, rest[0], rest[1], rest.slice(2).join(' '), { by: one('by'), author: one('author'), prefix: one('prefix') });
     case 'promote':
       if (rest.length !== 1) throw new CommandError(USAGE);
-      return commandPromote(root, rest[0], { by: one('by'), topic: one('topic') });
+      return commandPromote(root, rest[0], { by: one('by'), topic: one('topic'), to: one('to') });
     case 'supersede':
       if (rest.length !== 1) throw new CommandError(USAGE);
       return commandSupersede(root, rest[0], { by: one('by'), approvedBy: one('approved-by') });
@@ -691,6 +783,9 @@ export function run(root: string, argv: string[]): CommandResult {
     case 'done':
       if (rest.length !== 1) throw new CommandError(USAGE);
       return commandDone(root, rest[0], { by: one('by') });
+    case 'accept':
+      if (rest.length > 1 || (rest.length === 0 && !one('promoted'))) throw new CommandError(USAGE);
+      return commandAccept(root, { id: rest[0], promotedSince: one('promoted') });
     default:
       throw new CommandError(USAGE);
   }
