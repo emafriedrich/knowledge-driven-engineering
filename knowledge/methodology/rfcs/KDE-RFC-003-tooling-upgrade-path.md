@@ -1,7 +1,7 @@
 ---
 id: KDE-RFC-003
 title: Upgrade path for framework tooling in adopting repositories
-status: accepted
+status: implemented
 created: 2026-09-03
 updated: 2026-09-09
 authors: [engineering]
@@ -47,4 +47,4 @@ Both resolved at review (2026-09-09):
 
 ## Outcome
 
-Accepted on 2026-09-09. Decision recorded in DR-011. Implementation (the `--upgrade` flag, `# kde-version:` markers, the always-on skew warning) is tracked as a consequence of DR-011 and is not yet in `install.sh`. The first alternative — distributing the tools as an npm package — is carried forward as KDE-RFC-010 so it is decided explicitly rather than left as the "eventual right answer" in prose.
+Accepted on 2026-09-09. Decision recorded in DR-011. Implemented the same day: `install.sh --upgrade`, `kde-version` markers stamped from `package.json` (`0.1.0`), the always-on skew warning, `KDE_REF` pinning to tags, a CI guard that rejects changes to framework-owned files without a version bump, an installer test, and the Upgrading section in ADOPTING.md. The first alternative — distributing the tools as an npm package — is carried forward as KDE-RFC-010 so it is decided explicitly rather than left as the "eventual right answer" in prose.

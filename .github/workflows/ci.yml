@@ -20,6 +20,24 @@ jobs:
       - run: npm run knowledge:check
       - run: node --experimental-strip-types tools/knowledge-context.mts --check
       - run: npm test
+      - name: Version bump guard (DR-011)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: |
+          # Files the installer copies into adopting repositories must not change
+          # without a package.json version bump, or adopters never see the skew.
+          if git diff --name-only "$BASE_REF"...HEAD | grep -qE '^(tools/|install\.sh$|\.claude/settings\.json$)'; then
+            base="$(git show "$BASE_REF":package.json | node -p 'JSON.parse(require("fs").readFileSync(0, "utf8")).version')"
+            head="$(node -p 'require("./package.json").version')"
+            if [ "$base" = "$head" ]; then
+              echo "Framework-owned files changed but package.json version is still $head. Bump it (npm version <patch|minor> --no-git-tag-version) so adopters see the skew."
+              exit 1
+            fi
+            echo "framework version: $base -> $head"
+          else
+            echo "no framework-owned files changed."
+          fi
       - name: Drift gate
         if: github.event_name == 'pull_request'
         env:

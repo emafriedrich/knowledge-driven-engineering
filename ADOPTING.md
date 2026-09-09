@@ -26,7 +26,22 @@ What you do **not** copy: HANDBOOK.md, the `methodology` domain, `examples/`, `t
 curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/main/install.sh | bash -s -- <your-first-domain>
 ```
 
-`install.sh` performs the manual steps below, is idempotent, and never overwrites an existing file (it skips and tells you). It detects your package manager (npm, pnpm — workspaces included, yarn, bun) for the `yaml` dependency, and a dependency failure warns instead of aborting the install. Run it from the root of your repository; pass your first domain name as the argument. Offline or pinned installs work from a local clone: `KDE_SOURCE=/path/to/clone bash install.sh <domain>`.
+`install.sh` performs the manual steps below, is idempotent, and never overwrites an existing file (it skips and tells you). It detects your package manager (npm, pnpm — workspaces included, yarn, bun) for the `yaml` dependency, and a dependency failure warns instead of aborting the install. Run it from the root of your repository; pass your first domain name as the argument. Offline installs work from a local clone: `KDE_SOURCE=/path/to/clone bash install.sh <domain>`. To pin a release instead of tracking `main`, set `KDE_REF=v0.1.0`.
+
+## Upgrading
+
+The installer classifies what it writes by owner (DR-011):
+
+- **Framework-owned** — `tools/knowledge-check.mts`, `tools/knowledge-context.mts`, `tools/drift-gate.mts`, `tools/knowledge-hook.mts`, `.github/workflows/kde.yml`, and the KDE hook entries in `.claude/settings.json`. Every copy carries a `kde-version: X.Y.Z` marker on its first line.
+- **Adopter-owned** — everything under `knowledge/`, `templates/`, `AGENTS.md`, and your `package.json` beyond the two KDE scripts. Never touched, on any run. Templates are yours to shape to your team's conventions; the validator, not the template text, enforces KDE-SPEC-001.
+
+Every run compares the installed markers with the fetched version and warns when a framework-owned file differs — whether from a newer release upstream or a local edit. To refresh them:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/main/install.sh | bash -s -- --upgrade
+```
+
+`--upgrade` replaces framework-owned files that differ and reports each one (`upgrade tools/knowledge-check.mts (0.1.0 -> 0.2.0)`). Local edits to a framework-owned file are lost on upgrade — that per-file line is how you notice. Edits that should survive belong in adopter-owned files, or upstream as a proposal. Adopter-owned files are not touched by `--upgrade` either. New template files that a release adds (as `templates/model.md` and `templates/contract.md` were) arrive on a plain run, because the installer adds any file that does not exist yet.
 
 ## Manual Steps
 
@@ -68,7 +83,7 @@ That already gives an agent what most repositories lack: which decisions are in 
 
 Copying files is the V1 adoption path on purpose: it keeps your knowledge and its validator versioned inside the repository they govern, which is where CI needs them. Two distribution improvements are candidates once the method stabilizes against a real product:
 
-- an npm package (`npx kde-check`) so the validator updates without vendoring, and
+- an npm package with a `kde` binary so the validator updates as a dependency bump instead of a copy (proposed in KDE-RFC-010; `install.sh --upgrade` is the bridge until it is decided), and
 - an agent skill that scaffolds the tree and teaches the retrieval rules to coding agents.
 
 Both would complement the scaffold, not replace it: canonical knowledge always lives in the adopting repository.

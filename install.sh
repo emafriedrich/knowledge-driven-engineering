@@ -7,16 +7,67 @@
 # From a local clone (offline / development):
 #   KDE_SOURCE=/path/to/knowledge-driven-engineering bash install.sh <first-domain>
 #
-# Idempotent: existing files are never overwritten.
+# Pin a release instead of main:
+#   KDE_REF=v0.1.0 curl -fsSL .../install.sh | bash -s -- <first-domain>
+#
+# Refresh framework-owned files after a release (DR-011):
+#   curl -fsSL .../install.sh | bash -s -- --upgrade
+#
+# Idempotent: existing files are never overwritten unless --upgrade is given,
+# and even then only framework-owned files (tools/, the kde.yml workflow) are
+# replaced. Adopter-owned files (knowledge/, templates/, AGENTS.md,
+# package.json) are never touched.
 set -euo pipefail
 
-DOMAIN="${1:-}"
+DOMAIN=""
+UPGRADE=0
+for arg in "$@"; do
+  case "$arg" in
+    --upgrade) UPGRADE=1 ;;
+    --*) printf 'install.sh: unknown option %s\n' "$arg" >&2; exit 2 ;;
+    *) DOMAIN="$arg" ;;
+  esac
+done
 REPO_URL="https://github.com/emafriedrich/knowledge-driven-engineering"
 REF="${KDE_REF:-main}"
 
 say()  { printf '%s\n' "$*"; }
 add()  { say "  add   $1"; }
 skip() { say "  skip  $1 (already exists)"; }
+
+# Version of the framework-owned files a repository runs, read from the
+# kde-version marker the installer stamps on line 1 of every copy.
+installed_version() {
+  [ -e "$1" ] || { printf 'none'; return; }
+  local v
+  v="$(awk 'NR == 1 && /kde-version:/ { sub(/.*kde-version: */, ""); print; exit }' "$1")"
+  printf '%s' "${v:-pre-0.1.0}"
+}
+
+# Framework-owned files: added when missing, refreshed with --upgrade, never
+# otherwise touched. $1 is the comment prefix for the marker line, $2 the
+# upstream content, $3 the destination. Files that differ from upstream without
+# --upgrade are collected in STALE and reported once at the end.
+STALE=""
+framework_file() {
+  local prefix="$1" src="$2" dest="$3" tmp
+  tmp="$(mktemp)"
+  { printf '%s kde-version: %s\n' "$prefix" "$KDE_VERSION"; cat "$src"; } > "$tmp"
+  if [ ! -e "$dest" ]; then
+    cat "$tmp" > "$dest"; add "$dest"
+  elif cmp -s "$tmp" "$dest"; then
+    say "  ok    $dest (kde ${KDE_VERSION})"
+  elif [ "$UPGRADE" -eq 1 ]; then
+    local from; from="$(installed_version "$dest")"
+    [ "$from" = "$KDE_VERSION" ] && from="local edits at ${from}"
+    say "  upgrade $dest (${from} -> ${KDE_VERSION})"
+    cat "$tmp" > "$dest"
+  else
+    skip "$dest"
+    STALE="${STALE} ${dest}"
+  fi
+  rm -f "$tmp"
+}
 
 # --- Locate source files -----------------------------------------------------
 CLEANUP=""
@@ -26,18 +77,31 @@ else
   TMP="$(mktemp -d)"
   CLEANUP="$TMP"
   say "Downloading ${REPO_URL}@${REF} ..."
-  curl -fsSL "${REPO_URL}/archive/refs/heads/${REF}.tar.gz" | tar -xz -C "$TMP"
+  # /archive/<ref>.tar.gz resolves branches, tags and commits alike, so KDE_REF
+  # can pin a release (v0.1.0) as well as track main.
+  curl -fsSL "${REPO_URL}/archive/${REF}.tar.gz" | tar -xz -C "$TMP"
   SRC="$(find "$TMP" -maxdepth 1 -mindepth 1 -type d | head -1)"
 fi
 trap '[ -n "$CLEANUP" ] && rm -rf "$CLEANUP"' EXIT
 
-say "Installing Knowledge-Driven Engineering into $(pwd)"
+# The framework version is package.json's version in this repository (DR-011).
+KDE_VERSION="$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$SRC/package.json" | head -1)"
+if [ -z "$KDE_VERSION" ]; then
+  say "install.sh: could not read version from ${SRC}/package.json" >&2
+  exit 1
+fi
+
+if [ "$UPGRADE" -eq 1 ]; then
+  say "Upgrading Knowledge-Driven Engineering framework files in $(pwd) to ${KDE_VERSION}"
+else
+  say "Installing Knowledge-Driven Engineering ${KDE_VERSION} into $(pwd)"
+fi
 
 # --- Tools and templates -----------------------------------------------------
 mkdir -p tools templates
 
 for f in knowledge-check.mts knowledge-context.mts drift-gate.mts knowledge-hook.mts; do
-  if [ -e "tools/$f" ]; then skip "tools/$f"; else cp "$SRC/tools/$f" "tools/$f"; add "tools/$f"; fi
+  framework_file '//' "$SRC/tools/$f" "tools/$f"
 done
 
 for src in "$SRC"/templates/*.md; do
@@ -118,10 +182,8 @@ fi
 
 # --- CI ----------------------------------------------------------------------
 mkdir -p .github/workflows
-if [ -e .github/workflows/kde.yml ]; then
-  skip .github/workflows/kde.yml
-else
-  cat > .github/workflows/kde.yml <<'WORKFLOW'
+WORKFLOW_SRC="$(mktemp)"
+cat > "$WORKFLOW_SRC" <<'WORKFLOW'
 name: Knowledge
 
 on:
@@ -154,8 +216,8 @@ jobs:
           DRIFT_BASE_REF: origin/${{ github.base_ref }}
         run: node --experimental-strip-types tools/drift-gate.mts
 WORKFLOW
-  add .github/workflows/kde.yml
-fi
+framework_file '#' "$WORKFLOW_SRC" .github/workflows/kde.yml
+rm -f "$WORKFLOW_SRC"
 
 # --- Claude Code hooks (optional layer; CI stays the hard guarantee) ---------
 if [ -e .claude/settings.json ]; then
@@ -251,6 +313,16 @@ if "${PM_CMD[@]}" >/dev/null 2>&1; then
 else
   say "  WARN  could not install the 'yaml' dependency (tried: ${PM_CMD[*]})."
   say "        Install it manually before running knowledge:check."
+fi
+
+# --- Version skew ------------------------------------------------------------
+# Reported on every run, not only with --upgrade: the flag is discoverable
+# through the warning (DR-011).
+if [ -n "$STALE" ]; then
+  say ""
+  say "  WARN  framework-owned files differ from kde ${KDE_VERSION} (installed: $(installed_version tools/knowledge-check.mts)):"
+  for f in $STALE; do say "        - $f"; done
+  say "        Re-run with --upgrade to refresh them. Adopter-owned files (knowledge/, templates/, AGENTS.md) are never touched."
 fi
 
 # --- Done --------------------------------------------------------------------
