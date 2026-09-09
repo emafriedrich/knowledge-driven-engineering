@@ -29,14 +29,15 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 | drift-verification | DR-008 | Verify knowledge drift mechanically | 2026-09-03 |
 | domain-context-manifests | DR-009 | Domains expose a generated CONTEXT.md manifest | 2026-09-03 |
 | model-and-contract-artifacts | DR-010 | Models and contracts are first-class artifacts bound to specs and code | 2026-09-08 |
+| tooling-upgrade-path | DR-011 | The installer refreshes framework-owned files on request and reports version skew always | 2026-09-09 |
 
 ## Pending — NOT current truth, do not obey
 
-- `KDE-RFC-003` (draft, agent-drafted): Upgrade path for framework tooling in adopting repositories
 - `KDE-RFC-004` (draft, agent-drafted): Lighter frontmatter for small documents
 - `KDE-RFC-006` (draft, agent-drafted): Lifecycle commands for creating, promoting and superseding knowledge
 - `KDE-RFC-008` (draft, agent-drafted): External systems as signals and mirrors, never as canonical stores
 - `KDE-RFC-009` (draft, agent-drafted): Declared implementation against drafts and executable acceptance checks
+- `KDE-RFC-010` (draft, agent-drafted): Distribute framework tooling as an npm package
 
 ## Rules
 
