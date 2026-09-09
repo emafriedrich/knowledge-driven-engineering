@@ -33,11 +33,11 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 | lighter-frontmatter | DR-012 | Six frontmatter fields are always required; the rest default or are gated | 2026-09-09 |
 | lifecycle-commands | DR-013 | Lifecycle transitions are commands that leave the repository valid or refuse | 2026-09-09 |
 | external-systems | DR-014 | External systems are raw signals or one-way mirrors; only a tracker may own task status | 2026-09-09 |
+| declared-drafts-and-acceptance | DR-015 | Implementing against a draft is declared, and implemented means the acceptance block passed | 2026-09-09 |
 
 ## Pending — NOT current truth, do not obey
 
 - `KDE-PLAYBOOK-001` (draft, agent-drafted): Drafting knowledge from external signals
-- `KDE-RFC-009` (draft, agent-drafted): Declared implementation against drafts and executable acceptance checks
 - `KDE-RFC-010` (draft, agent-drafted): Distribute framework tooling as an npm package
 
 ## Rules

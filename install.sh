@@ -221,6 +221,9 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
           DRIFT_BASE_REF: origin/${{ github.base_ref }}
         run: node --experimental-strip-types tools/drift-gate.mts
+      - name: Acceptance checks for specs promoted to implemented (DR-015)
+        if: github.event_name == 'pull_request'
+        run: node --experimental-strip-types tools/knowledge.mts accept --promoted origin/${{ github.base_ref }}
 WORKFLOW
 framework_file '#' "$WORKFLOW_SRC" .github/workflows/kde.yml
 rm -f "$WORKFLOW_SRC"
@@ -295,6 +298,7 @@ When sources disagree: active Decision Record > current Specification > other do
 - Never set a document you drafted to \`accepted\`, \`current\`, or \`implemented\`. Promotion is human-only.
 - Create knowledge documents with \`npm run knowledge -- new <type> <domain> "<title>" --by agent\` (a missing domain: \`npm run knowledge -- domain add <name> --description "<text>"\`).
 - Never run \`knowledge promote\` or \`knowledge supersede\`: promotion is human-only.
+- Implementing against a draft spec is allowed and must be visible: write \`implements-draft: <SPEC-ID>\` in the PR description. The spec still needs a human to promote it.
 - Run \`npm run knowledge:check\` after changing knowledge artifacts.
 <!-- kde:end -->
 AGENTSBLOCK

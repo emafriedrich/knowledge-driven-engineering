@@ -72,6 +72,7 @@ Create or update a task only after the canonical knowledge that justifies it exi
 - Keep prompts short and reference canonical IDs or paths.
 - Create knowledge documents with `npm run knowledge -- new <type> <domain> "<title>" --by agent`; add a missing domain with `npm run knowledge -- domain add <name> --description "<text>"`. Both run the validator and refresh manifests.
 - Never run `knowledge promote` or `knowledge supersede`. Promotion is human-only; tell the human the command instead.
+- Implementing against a draft spec is allowed and must be visible: write `implements-draft: <SPEC-ID>` in the PR description. The drift gate fails without it; the spec still needs a human to promote it.
 - Resolve an id collision with `npm run knowledge -- renumber <OLD-ID> <NEW-ID>`, not by hand.
 - After editing knowledge artifacts directly, run `npm run knowledge:check` and refresh manifests with `npm run knowledge:context -- --write`.
 

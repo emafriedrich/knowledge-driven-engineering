@@ -1,17 +1,17 @@
 ---
 id: KDE-RFC-009
 title: Declared implementation against drafts and executable acceptance checks
-status: draft
+status: implemented
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 authors: [engineering]
 drafted_by: agent
-approved_by: []
+approved_by: [emafriedrich]
 motivated_by: Field use — an agent implemented the screen half of a spec that was still a draft and disclosed it only in chat; the drift gate fires only for domains that have a current spec, so pre-approval work was invisible to it, and the spec's acceptance checks had to be re-derived by hand as shell commands
 scope: [methodology]
 tags: [rfc, verification]
 depends_on: [KDE-SPEC-001]
-related: [DR-007, DR-008, DR-009, KDE-RFC-006, KDE-FLOW-001]
+related: [DR-007, DR-008, DR-009, DR-013, DR-015, KDE-RFC-006, KDE-FLOW-001]
 ---
 
 # RFC: Declared Implementation Against Drafts And Executable Acceptance Checks
@@ -42,10 +42,12 @@ Separately, specs end in an Acceptance Checks section written for a human. An ag
 
 ## Open Questions
 
-- Where do acceptance commands run in CI when they need a database or a running API? Options: a `requires:` line that maps to docker-compose services, or marking such specs `manual` and gating only on the receipt.
-- Should `implements-draft` be allowed on the default branch, or only on PR branches?
-- Is one declaration per PR enough, or should the receipt (Gate 5) list every draft consulted?
+All three resolved at review (2026-09-09):
+
+- The framework provisions nothing. An acceptance block normally invokes the project's own test suite, which already runs wherever the project's CI runs, with whatever services the project's CI provides. A check that needs a running API belongs in an integration test the project already knows how to run; `requires:` lines, docker mappings and a `manual` category are dropped. A command that only passes on one machine fails in CI, exactly like a test would.
+- `implements-draft` is allowed on any branch. Branch policy is not the framework's (DR-013); the gate runs on pull requests, where the declaration lives, and the local hook warns on every branch.
+- One declaration per implemented draft in the PR body; the receipt is not extended. The declaration states intent; the receipt already lists the domain's pending drafts automatically (DR-009), which is what was seen — asking the agent to enumerate what it consulted would reintroduce the self-reporting Gate 5 exists to remove.
 
 ## Outcome
 
-Pending review.
+Accepted and implemented on 2026-09-09. Decision recorded in DR-015. Shipped: the drift gate's draft branch and `implements-draft` validation, the write hook's one-line warning, the `acceptance` fence in the spec template, `knowledge accept <ID>` and `accept --promoted <ref>`, `promote --to implemented` gated on a passing run, the CI step in this repository and in the installer's workflow, KDE-SPEC-001, HANDBOOK, AGENTS sections and ADOPTING, tests.

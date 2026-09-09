@@ -5,7 +5,7 @@ import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 
 import { checkKnowledge } from '../tools/knowledge-check.mts';
-import { CommandError, commandDomainAdd, commandDone, commandNew, commandPromote, commandRenumber, commandSupersede, run } from '../tools/knowledge.mts';
+import { CommandError, commandAccept, commandDomainAdd, commandDone, commandNew, commandPromote, commandRenumber, commandSupersede, run } from '../tools/knowledge.mts';
 
 const repo = resolve(import.meta.dirname, '..');
 const CATALOG = 'domains:\n  test:\n    path: knowledge/test\n    description: Test domain.\n';
@@ -213,5 +213,35 @@ test('done: closes a task, refuses non-tasks, and names the tracker ticket when 
 
     commandNew(root, 'decision', 'test', 'Not a task');
     assert.throws(() => commandDone(root, 'DR-001'), /done closes tasks/);
+  });
+});
+
+test('accept: runs the acceptance fence and reports per command; promote --to implemented is gated on it', () => {
+  withFixture({}, (root) => {
+    commandNew(root, 'decision', 'test', 'Anchor');
+    commandPromote(root, 'DR-001', { by: 'ema' });
+    commandNew(root, 'spec', 'test', 'Checkout behavior', { author: 'ema' });
+    const spec = only(join(root, 'knowledge/test/specs'), 'SPEC-001-');
+    const withAnchor = readFileSync(spec, 'utf8').replace('depends_on: []', 'depends_on: [DR-001]');
+
+    // The template ships a placeholder command; it must fail loudly, not pass.
+    writeFileSync(spec, withAnchor);
+    assert.throws(() => commandAccept(root, { id: 'SPEC-001' }), /FAIL {2}npm test -- --grep "<capability>"[\s\S]*accept failed: SPEC-001 failed acceptance/);
+    assert.throws(() => commandPromote(root, 'SPEC-001', { by: 'ema', to: 'implemented' }), /promote refused: acceptance checks of SPEC-001 failed/);
+    assert.equal(front(spec).status, 'draft');
+
+    writeFileSync(spec, withAnchor.replace(/```acceptance[\s\S]*?```/, '```acceptance\n# comment lines are skipped\ntest -f knowledge/index.yaml\necho checked\n```'));
+    const accepted = commandAccept(root, { id: 'SPEC-001' });
+    assert.match(accepted.notes.join('\n'), /ok {4}test -f knowledge\/index\.yaml\n {2}ok {4}echo checked/);
+
+    const promoted = commandPromote(root, 'SPEC-001', { by: 'ema', to: 'implemented' });
+    assert.equal(front(spec).status, 'implemented');
+    assert.match(promoted.notes.join('\n'), /acceptance checks passed/);
+    assert.deepEqual(checkKnowledge(root).errors, []);
+
+    writeFileSync(spec, readFileSync(spec, 'utf8').replace(/```acceptance[\s\S]*?```\n/, '').replace('status: implemented', 'status: current'));
+    assert.throws(() => commandPromote(root, 'SPEC-001', { by: 'ema', to: 'implemented' }), /has no acceptance block/);
+    assert.throws(() => commandPromote(root, 'DR-001', { by: 'ema', to: 'current' }), /--to accepts only implemented/);
+    assert.throws(() => commandAccept(root, {}), /accept needs a <SPEC-ID>/);
   });
 });
