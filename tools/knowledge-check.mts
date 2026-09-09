@@ -33,7 +33,10 @@ const ACTIVE_DECISION_STATUSES = new Set(['accepted', 'implemented']);
 // Statuses that make a document part of current truth (and therefore worth anchoring in an index).
 const CURRENT_TRUTH_STATUSES = new Set(['accepted', 'implemented', 'current']);
 const REFERENCE_FIELDS = ['related', 'depends_on', 'supersedes', 'superseded_by'];
-const REQUIRED_FIELDS = ['id', 'title', 'status', 'created', 'updated', 'authors', 'scope', 'tags', 'depends_on', 'related'];
+// Always required (DR-012). `authors` is required only in current truth,
+// `depends_on` and `related` default to empty, and the type tag may be
+// inferred from the artifact folder.
+const REQUIRED_FIELDS = ['id', 'title', 'status', 'created', 'updated', 'scope'];
 // Every document must carry exactly one artifact type tag. The type drives
 // validation rules; ID patterns are not a reliable type signal.
 const TYPE_TAGS = new Set([
@@ -50,6 +53,21 @@ const TYPE_TAGS = new Set([
   'task',
   'playbook',
 ]);
+// Artifact folder -> type, used when a document writes no type tag (DR-012).
+// An explicit tag always wins; outside these folders the tag is required.
+const FOLDER_TYPES: Record<string, string> = {
+  decisions: 'decision',
+  specs: 'spec',
+  rfcs: 'rfc',
+  flows: 'flow',
+  ia: 'ia',
+  'design-system': 'design-system',
+  models: 'model',
+  contracts: 'contract',
+  prompts: 'prompt',
+  tasks: 'task',
+  playbooks: 'playbook',
+};
 // A model's primary content is its diagram (DR-010).
 const MERMAID_BLOCK = /```mermaid\b/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -291,9 +309,23 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
       errors.push(`${relative(root, file)} has empty scope`);
     }
 
+    // Promoted truth needs an accountable owner; a draft may be anonymous (DR-012).
+    if (typeof status === 'string' && CURRENT_TRUTH_STATUSES.has(status) && values(data, 'authors').length === 0) {
+      errors.push(`${relative(root, file)} has status ${status} but no authors (required in current truth)`);
+    }
+
     const typeTags = values(data, 'tags').filter((tag) => TYPE_TAGS.has(tag));
     if (typeTags.length === 0) {
-      errors.push(`${relative(root, file)} has no artifact type tag (expected one of: ${[...TYPE_TAGS].join(', ')})`);
+      const inferred = FOLDER_TYPES[basename(dirname(file))];
+      if (inferred) {
+        // Write the inferred tag back so every consumer of documentType() sees one signal.
+        data.tags = [...values(data, 'tags'), inferred];
+      } else {
+        errors.push(
+          `${relative(root, file)} has no artifact type tag and is not in a recognized artifact folder ` +
+          `(add one of: ${[...TYPE_TAGS].join(', ')}, or place it under ${Object.keys(FOLDER_TYPES).join('/, ')}/)`,
+        );
+      }
     } else if (typeTags.length > 1) {
       errors.push(`${relative(root, file)} has multiple artifact type tags (${typeTags.join(', ')})`);
     }

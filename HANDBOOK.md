@@ -132,13 +132,15 @@ related: [FLOW-002]
 ---
 ```
 
+Only `id`, `title`, `status`, `created`, `updated` and `scope` are always required; a small draft costs six lines. `authors` becomes required when the document enters current truth, `depends_on` and `related` default to empty, and the type tag is inferred from the folder (`decisions/`, `specs/`, `rfcs/`, ...) when not written.
+
 Fields:
 
 - `id`: stable reference.
 - `title`: readable name.
 - `status`: lifecycle state.
 - `created` and `updated`: age and review signal.
-- `authors`: accountable person, team, or role.
+- `authors`: accountable person, team, or role; required in current truth.
 - `scope`: stable domain names for retrieval.
 - `tags`: document type or topic inside the scope.
 - `depends_on`: canonical documents that should trigger review if they change.
