@@ -283,7 +283,7 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
     }
 
     if (ids.has(id)) {
-      errors.push(`duplicate id ${id} in ${relative(root, ids.get(id)!.file)} and ${relative(root, file)}`);
+      errors.push(`duplicate id ${id} in ${relative(root, ids.get(id)!.file)} and ${relative(root, file)} — renumber one: npm run knowledge -- renumber ${id} <NEW-ID>`);
     } else {
       ids.set(id, document);
     }
@@ -307,6 +307,14 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
 
     if (values(data, 'scope').length === 0) {
       errors.push(`${relative(root, file)} has empty scope`);
+    }
+
+    // A value still wrapped in <...> is a template placeholder nobody filled in (DR-013).
+    for (const [field, raw] of Object.entries(data)) {
+      const items = Array.isArray(raw) ? raw.map(String) : typeof raw === 'string' ? [raw] : [];
+      if (items.some((item) => /^<[^>]*>$/.test(item.trim()))) {
+        errors.push(`${relative(root, file)} still holds a template placeholder in ${field}`);
+      }
     }
 
     // Promoted truth needs an accountable owner; a draft may be anonymous (DR-012).
@@ -388,7 +396,7 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
     }
 
     if (agentDrafted && CURRENT_TRUTH_STATUSES.has(status) && values(data, 'approved_by').length === 0) {
-      errors.push(`${file} is agent-drafted with status ${status} but has empty approved_by`);
+      errors.push(`${file} is agent-drafted with status ${status} but has empty approved_by — a human promotes it: npm run knowledge -- promote ${String(data.id)} --by <human>`);
     }
 
     const anchoredTypes = type === 'spec' || type === 'flow' || type === 'ia' || type === 'model' || type === 'contract';
@@ -520,7 +528,7 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
 
     for (const scope of values(document.data, 'scope')) {
       if (!catalog.domains.has(scope)) {
-        errors.push(`${relative(root, document.file)} has scope value ${scope} that is not a domain in ${relative(root, catalog.file)}`);
+        errors.push(`${relative(root, document.file)} has scope value ${scope} that is not a domain in ${relative(root, catalog.file)} — create it: npm run knowledge -- domain add ${scope} --description "<one line>"`);
       }
     }
   }
