@@ -33,6 +33,8 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 
 - `KDE-RFC-003` (draft, agent-drafted): Upgrade path for framework tooling in adopting repositories
 - `KDE-RFC-004` (draft, agent-drafted): Lighter frontmatter for small documents
+- `KDE-RFC-006` (draft, agent-drafted): Lifecycle commands for creating, promoting and superseding knowledge
+- `KDE-RFC-009` (draft, agent-drafted): Declared implementation against drafts and executable acceptance checks
 
 ## Rules
 
