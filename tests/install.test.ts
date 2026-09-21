@@ -101,6 +101,22 @@ test('a domain argument on an installed repository creates nothing and points at
   }
 });
 
+test('the installed kde section carries every hard rule of the framework AGENTS.md, and the CONTEXT.md retrieval step', () => {
+  const root = mkdtempSync(join(tmpdir(), 'kde-install-test-'));
+  try {
+    install(root, 'shop');
+    const installed = readFileSync(join(root, 'AGENTS.md'), 'utf8');
+    const own = readFileSync(join(repo, 'AGENTS.md'), 'utf8');
+    const rules = own.split('## Hard Rules')[1].split('\n').filter((line) => line.startsWith('- '));
+    assert.ok(rules.length > 0);
+    // The tools enforce these rules in adopting repositories too; a rule missing here is lost on --upgrade.
+    for (const rule of rules) assert.ok(installed.includes(rule), `install.sh kde section is missing the hard rule: ${rule}`);
+    assert.match(installed, /Read the domain `CONTEXT\.md` when present/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('the kde section of AGENTS.md is framework-owned: reported when stale, replaced only between the markers on --upgrade', () => {
   const root = mkdtempSync(join(tmpdir(), 'kde-install-test-'));
   try {
