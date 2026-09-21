@@ -81,6 +81,7 @@ Create or update a task only after the canonical knowledge that justifies it exi
 - Approval in chat is not promotion. Never write `approved_by` or promote a document on a human's behalf; prepare the document and give the human the promotion command to run.
 - `implemented` belongs to specs only, and only `promote --to implemented` sets it. Decision Records and RFCs stay `accepted`; tasks close with `knowledge done`.
 - Implementing against a draft spec is allowed and must be visible: write `implements-draft: <SPEC-ID>` in the PR description. The drift gate fails without it; the spec still needs a human to promote it.
+- When you change code under a current Contract's `implements` paths, update the contract in the same change or write `no-behavior-change` in the PR description. The drift gate fails otherwise (DR-010).
 - Resolve an id collision with `npm run knowledge -- renumber <OLD-ID> <NEW-ID>`, not by hand.
 - After editing knowledge artifacts directly, run `npm run knowledge:check` and refresh manifests with `npm run knowledge:context -- --write`.
 
