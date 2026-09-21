@@ -1,7 +1,7 @@
 ---
 id: KDE-RFC-006
 title: Lifecycle commands for creating, promoting and superseding knowledge
-status: implemented
+status: accepted
 created: 2026-09-08
 updated: 2026-09-09
 authors: [engineering]

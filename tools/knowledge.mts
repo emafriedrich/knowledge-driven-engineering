@@ -312,13 +312,13 @@ export function commandPromote(root: string, id: string, options: { by?: string;
   }
   if (options.to !== undefined && options.to !== 'implemented') throw new CommandError(`--to accepts only implemented (the active status is the default)`);
   const target = options.to ?? spec.active;
-  if (options.to === 'implemented' && !['spec', 'rfc', 'decision'].includes(type)) {
-    throw new CommandError(`${type} documents are ${spec.active} at most; implemented applies to specs, RFCs and decisions`);
+  if (options.to === 'implemented' && type !== 'spec') {
+    throw new CommandError(`${type} documents are ${spec.active} at most; implemented belongs to specs, whose acceptance block proves it (DR-016)`);
   }
   const status = String(document.data.status);
   if (status === target) return { changed: [], notes: [`${id} is already ${status}`] };
   const acceptance: string[] = [];
-  if (options.to === 'implemented' && type === 'spec') {
+  if (options.to === 'implemented') {
     // `implemented` earns its meaning (DR-015): the spec's acceptance block must pass here and now.
     const commands = acceptanceCommands(document.content);
     if (!commands) {
@@ -426,7 +426,7 @@ export function commandSupersede(root: string, oldId: string, options: { by?: st
   }
   if (String(oldDoc.data.status) === 'superseded') return { changed: [], notes: [`${oldId} is already superseded`] };
   const newStatus = String(newDoc.data.status);
-  const newIsActive = newStatus === 'accepted' || newStatus === 'implemented';
+  const newIsActive = newStatus === 'accepted';
   if (!newIsActive && newStatus !== 'draft' && newStatus !== 'in-review') {
     throw new CommandError(`${newId} is ${newStatus}; a superseding record must be active or a draft to promote`);
   }
@@ -631,13 +631,13 @@ export function commandDone(root: string, id: string, options: { by?: string } =
   const { document } = findDocument(root, id);
   if (documentType(document.data) !== 'task') throw new CommandError(`${id} is ${documentType(document.data) ?? 'untyped'}; done closes tasks`);
   const status = String(document.data.status);
-  if (status === 'implemented') return { changed: [], notes: [`${id} is already done`] };
+  if (status === 'done') return { changed: [], notes: [`${id} is already done`] };
   const doc = splitDocument(document.content);
   if (!doc) throw new CommandError(`${relative(root, document.file)} has no frontmatter`);
 
   const before = checkKnowledge(root).errors;
   const saved = snapshot([document.file]);
-  setField(doc.front, 'status', 'implemented');
+  setField(doc.front, 'status', 'done');
   setField(doc.front, 'updated', today());
   if (values(document.data, 'authors').length === 0 && options.by) setField(doc.front, 'authors', yamlList([options.by]), ['updated']);
   writeFileSync(document.file, joinDocument(doc));

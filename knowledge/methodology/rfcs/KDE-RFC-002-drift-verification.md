@@ -1,7 +1,7 @@
 ---
 id: KDE-RFC-002
 title: Drift verification between knowledge, code, and time
-status: implemented
+status: accepted
 created: 2026-08-31
 updated: 2026-09-03
 authors: [engineering]

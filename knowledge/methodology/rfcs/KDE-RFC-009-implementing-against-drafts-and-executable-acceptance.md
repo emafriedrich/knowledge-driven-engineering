@@ -1,7 +1,7 @@
 ---
 id: KDE-RFC-009
 title: Declared implementation against drafts and executable acceptance checks
-status: implemented
+status: accepted
 created: 2026-09-08
 updated: 2026-09-09
 authors: [engineering]
