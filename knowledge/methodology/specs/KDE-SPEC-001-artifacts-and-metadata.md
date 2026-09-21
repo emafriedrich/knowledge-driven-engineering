@@ -3,7 +3,7 @@ id: KDE-SPEC-001
 title: Knowledge artifact and metadata rules
 status: current
 created: 2026-08-30
-updated: 2026-09-08
+updated: 2026-09-21
 authors: [engineering]
 scope: [methodology]
 tags: [spec, metadata, artifacts]
@@ -72,7 +72,7 @@ Field responsibilities:
 - `external_ref` applies to Tasks: the ticket in an external tracker that owns the task's status and assignee (DR-014), as `<system>:<id>` (`jira:PD-123`) or a URL. Shape is validated; reachability is not.
 - `implements` applies to Contracts: repository paths (prefixes) of the machine-readable definition or the code that exposes the interface. Every path must exist. These paths participate in the drift gate (DR-010).
 
-Gates on status (DR-007, DR-010): an agent-drafted document cannot hold `accepted`, `current`, or `implemented` with empty `approved_by`. A spec entering current truth must depend on an active decision; a User Flow, Information Architecture or Model document entering current truth must depend on an active decision or current spec; a Contract entering current truth must depend on a current spec. A Model without a Mermaid block is an error in current truth and a warning while drafted.
+Gates on status (DR-007, DR-010): an agent-drafted document cannot hold `accepted`, `current`, or `implemented` with empty `approved_by`. Agents never write `approved_by`; approval given outside the repository is not promotion (DR-016). A spec entering current truth must depend on an active decision; a User Flow, Information Architecture or Model document entering current truth must depend on an active decision or current spec; a Contract entering current truth must depend on a current spec. A Model without a Mermaid block is an error in current truth and a warning while drafted.
 
 ## Domain Catalog Fields
 
@@ -83,6 +83,8 @@ A domain entry may declare `trackers`: a map from tracker system to the key that
 When a domain's specs are all drafts, the drift gate requires the pull request to declare `implements-draft: <SPEC-ID>` (or `no-behavior-change`) — implementing against a draft is allowed and visible, and the spec still needs promotion (DR-015). The declaration also satisfies the gate for a domain that has a current spec.
 
 A spec may carry an `acceptance` fenced block of shell commands, one per line, that prove its Acceptance Checks; `knowledge accept` runs them, `promote --to implemented` runs them first and refuses on failure, and CI re-runs them for specs promoted in a pull request. `implemented` therefore means the checks passed at the promoting commit (DR-015).
+
+Status by artifact (DR-016): `implemented` is valid only on specs. A Decision Record is `accepted` until `superseded`; an RFC ends `accepted`, `rejected` or `archived`; a Task closes with `done`, which is valid only on tasks, requires `authors`, and is not current truth. The validator rejects `implemented` or `done` anywhere else and names the replacement status.
 
 The drift gate also enforces contract obligations (DR-010): when files under a current Contract's `implements` paths change and the contract file does not, the pull request must declare `no-behavior-change` or the gate fails.
 

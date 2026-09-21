@@ -15,3 +15,5 @@ current:
   lifecycle-commands: DR-013
   external-systems: DR-014
   declared-drafts-and-acceptance: DR-015
+  artifact-lifecycle: DR-016
+  agent-rules-ownership: DR-017

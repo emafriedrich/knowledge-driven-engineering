@@ -1,7 +1,7 @@
 ---
 id: KDE-RFC-003
 title: Upgrade path for framework tooling in adopting repositories
-status: implemented
+status: accepted
 created: 2026-09-03
 updated: 2026-09-09
 authors: [engineering]

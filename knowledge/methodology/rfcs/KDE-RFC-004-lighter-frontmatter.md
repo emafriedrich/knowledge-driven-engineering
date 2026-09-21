@@ -1,7 +1,7 @@
 ---
 id: KDE-RFC-004
 title: Lighter frontmatter for small documents
-status: implemented
+status: accepted
 created: 2026-09-03
 updated: 2026-09-09
 authors: [engineering]

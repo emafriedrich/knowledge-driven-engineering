@@ -53,13 +53,15 @@ Answers: What significant change are we proposing?
 
 Use it for changes that need discussion, tradeoff analysis, or cross-domain review. RFCs are discussion artifacts. Do not use them as permanent behavior definitions after the team decides.
 
-Statuses: `draft`, `in-review`, `accepted`, `rejected`, `implemented`, `archived`.
+Statuses: `draft`, `in-review`, `accepted`, `rejected`, `archived`. An RFC is never `implemented` (DR-016): it records whether the proposal was accepted; whether the change landed is visible in its Outcome section and in the specs and tasks it produced.
 
 ### Decision Record
 
 Answers: What important decision did we make?
 
 Use Decision Records for architecture, product, UX, design, security, infrastructure, and business decisions. Use `Decision Record` as the canonical name. `ADR` remains a useful synonym when engineers recognize it, but the broader name matches the scope.
+
+A Decision Record is `accepted` until it is `superseded`. It is never `implemented` (DR-016): that status is a claim about behavior, and behavior is proven through a spec.
 
 Decision Records preserve history. Do not delete old decisions. If a new decision replaces an old one, mark the old record `superseded`, add `superseded_by`, and add `supersedes` to the new record.
 
@@ -113,6 +115,8 @@ Use tasks to coordinate execution. Tasks should reference the accepted RFC, acti
 
 A task may carry `external_ref` (`jira:PD-123`, `linear:ENG-42`, a URL) when the team's tracker is the system of record for its status and assignee (DR-014); what the task is, and the knowledge that justifies it, stay in the repository. On a status conflict the tracker wins. `npm run knowledge -- done <TASK-ID>` closes the task here and names the ticket to close there.
 
+Statuses: `draft`, `in-review`, `done`. A closed task is `done`, not `implemented` (DR-016).
+
 ### Prompt / Agent Context
 
 Answers: What context should an AI agent receive?
@@ -156,7 +160,7 @@ Fields:
 - `approved_by`: humans who approved promotion; required for agent-drafted documents in an active status.
 - `motivated_by`: the conflict or gap justifying an agent-drafted RFC.
 
-Promotion is gated (DR-007): an agent may propose everything and promote nothing. Behavior documents entering current truth must be anchored — specs to an active decision; flows and IA to an active decision or current spec.
+Promotion is gated (DR-007): an agent may propose everything and promote nothing. Approval in chat is not promotion: an agent never writes `approved_by` or promotes on a human's behalf; it prepares the document and gives the human the command. The validator can only see that `approved_by` is not empty, so without repository protections such as CODEOWNERS and branch protection this guarantee is procedural rather than technically enforced. Behavior documents entering current truth must be anchored — specs to an active decision; flows and IA to an active decision or current spec.
 
 Use `scope` because retrieval improves when a reader can ask for knowledge about `storefront` or `checkout`. Use `depends_on` because reasoning improves when a changed decision points to specs, flows, and prompts that need review.
 
@@ -220,8 +224,8 @@ Every transition above is one command (DR-013); each ends by running the validat
 - `npm run knowledge -- supersede <OLD-ID> --by <NEW-ID> [--approved-by <human>]` — link both records, re-point or retire the topic, promote a draft replacement, list the documents that depend on the old one.
 - `npm run knowledge -- domain add <name> --description "<text>" [--code-paths a/ b/]` — directory, README, empty decision index, catalog entry, manifest.
 - `npm run knowledge -- renumber <OLD-ID> <NEW-ID>` — rewrite an id everywhere at once when two branches allocated the same number.
-- `npm run knowledge -- done <TASK-ID> [--by <name>]` — close a task; names its tracker ticket when it has one.
-- `npm run knowledge -- accept <SPEC-ID>` — run a spec's acceptance block; `promote <SPEC-ID> --by <human> --to implemented` runs it and promotes only if it passes.
+- `npm run knowledge -- done <TASK-ID> [--by <name>]` — close a task with status `done`; names its tracker ticket when it has one.
+- `npm run knowledge -- accept <SPEC-ID>` — run a spec's acceptance block; `promote <SPEC-ID> --by <human> --to implemented` runs it and promotes only if it passes. `implemented` exists only on specs.
 
 Agents create and renumber; only humans promote and supersede.
 
@@ -260,7 +264,18 @@ Create an RFC when the change has unresolved tradeoffs.
 
 Create a Decision Record when a decision explains future constraints.
 
-Create or update a spec when implementation behavior changes.
+Create or update a spec when behavior needs an explicit, independently testable contract — particularly when it involves multiple rules, interactions, invariants, edge cases, or acceptance criteria that should not have to be reconstructed from code and Decision Records. One further signal: rules expected to change while the decision stays. A Decision Record is superseded, not edited, so rules a team wants to edit belong in a spec anchored to it. A spec is not required merely because code cites a decision: comments such as `// DR-017 rule 3` are desirable traceability, and the ratio of decisions to specs is not a health metric.
+
+The size of the change picks the path (DR-016) — RFC proposes, Decision Record decides, spec promises, tests prove:
+
+```text
+Simple decision:        DR -> code
+Complex behavior:       DR -> spec -> code + tests
+Large uncertainty:      RFC -> DR -> spec -> code + tests
+Rejected proposal:      RFC -> rejected
+```
+
+On the `DR -> code` path the drift gate and the acceptance block have nothing to act on; review and the project's tests verify the behavior. A team that wants the mechanical link writes the spec.
 
 Create a flow when sequence or branching affects user experience.
 
