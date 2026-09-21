@@ -3,6 +3,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, 
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
+import { parse as parseYaml } from 'yaml';
 
 import { checkKnowledge } from '../tools/knowledge-check.mts';
 import { CommandError, commandAccept, commandDomainAdd, commandDone, commandNew, commandPromote, commandRenumber, commandSupersede, run } from '../tools/knowledge.mts';
@@ -127,6 +128,33 @@ test('supersede: promotes a draft replacement under the old topic, links both re
     assert.equal(replacement.supersedes, '[DR-001]');
     assert.match(readFileSync(join(root, 'knowledge/test/decisions/index.yaml'), 'utf8'), /use-adr-name: DR-002/);
     assert.match(result.notes.join('\n'), /review documents that depend on DR-001: SPEC-001/);
+    assert.deepEqual(checkKnowledge(root).errors, []);
+  });
+});
+
+test('promote and supersede edit a decision index written in multi-line flow style, keeping its comments', () => {
+  withFixture({}, (root) => {
+    const indexFile = join(root, 'knowledge/test/decisions/index.yaml');
+    commandNew(root, 'decision', 'test', 'Old way');
+    commandPromote(root, 'DR-001', { by: 'ema' });
+    // The shape early installs wrote.
+    writeFileSync(indexFile, '# Keep me.\ncurrent: {\n  old-way: DR-001,\n  other: DR-001\n}\n');
+
+    commandNew(root, 'decision', 'test', 'New way');
+    commandPromote(root, 'DR-002', { by: 'ema' });
+    let index = readFileSync(indexFile, 'utf8');
+    assert.match(index, /^# Keep me\.$/m);
+    assert.match(index, /^current:\n  old-way: DR-001\n  other: DR-001\n  new-way: DR-002\n/m, 'rewritten in block style, one current key');
+    assert.deepEqual(parseYaml(index), { current: { 'old-way': 'DR-001', other: 'DR-001', 'new-way': 'DR-002' } });
+
+    commandSupersede(root, 'DR-001', { by: 'DR-002' });
+    assert.deepEqual(parseYaml(readFileSync(indexFile, 'utf8')), { current: { 'new-way': 'DR-002' } });
+
+    commandNew(root, 'decision', 'test', 'Newest way');
+    commandSupersede(root, 'DR-002', { by: 'DR-003', approvedBy: 'ema' });
+    index = readFileSync(indexFile, 'utf8');
+    assert.deepEqual(parseYaml(index), { current: { 'new-way': 'DR-003' } });
+    assert.match(index, /^# Keep me\.$/m);
     assert.deepEqual(checkKnowledge(root).errors, []);
   });
 });
