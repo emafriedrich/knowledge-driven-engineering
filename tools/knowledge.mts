@@ -18,7 +18,8 @@ import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { parse as parseYaml } from 'yaml';
+import { isMap, parse as parseYaml, parseDocument } from 'yaml';
+import type { Document } from 'yaml';
 
 import { checkKnowledge, documentType, loadCatalogs, values, type Catalog, type CatalogDomain } from './knowledge-check.mts';
 import { generateManifests } from './knowledge-context.mts';
@@ -216,10 +217,6 @@ function blockingErrors(root: string, before: string[], after: string[], touched
   return after.filter((error) => !seen.has(error) || files.some((file) => error.includes(file)));
 }
 
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 function writeManifests(root: string): string[] {
   const written: string[] = [];
   for (const manifest of generateManifests(root)) {
@@ -381,33 +378,42 @@ export function commandPromote(root: string, id: string, options: { by?: string;
   return { changed, notes };
 }
 
-// Adds `topic: id` under `current:` in a decision index as text, keeping the
-// file's comments. The index files the framework writes have a single top-level
-// key, which is what makes appending safe; anything else is refused.
+// Decision indexes are edited through the yaml document API, not as text: it
+// keeps comments and works for any style an adopter's index is written in
+// (block, or the flow style early installs wrote, which is rewritten as block).
+function readIndex(indexFile: string): Document {
+  const doc = parseDocument(readFileSync(indexFile, 'utf8'));
+  if (doc.errors.length > 0) throw new CommandError(`${indexFile} is not valid YAML: ${doc.errors[0].message}`);
+  if (doc.contents !== null && !isMap(doc.contents)) throw new CommandError(`${indexFile} must be a mapping with a current key`);
+  return doc;
+}
+
+function writeIndex(indexFile: string, doc: Document): void {
+  // A flow map reflows badly once edited; block style is what the framework writes.
+  const current = doc.get('current');
+  if (isMap(current)) current.flow = false;
+  writeFileSync(indexFile, doc.toString({ lineWidth: 0 }));
+}
+
 function upsertIndexTopic(indexFile: string, topic: string, id: string): 'added' | 'exists' | 'conflict' {
   if (!existsSync(indexFile)) {
     mkdirSync(dirname(indexFile), { recursive: true });
     writeFileSync(indexFile, `# Maps decision topics to the active Decision Record.\n# Keep rationale in the referenced record, not in this file.\ncurrent:\n  ${topic}: ${id}\n`);
     return 'added';
   }
-  const text = readFileSync(indexFile, 'utf8');
-  const parsed = (parseYaml(text) ?? {}) as Record<string, unknown>;
-  const current = (parsed.current ?? {}) as Record<string, unknown>;
-  if (current[topic] === id) return 'exists';
-  if (topic in current) return 'conflict';
-  const keys = Object.keys(parsed);
-  if (keys.some((key) => key !== 'current')) {
-    throw new CommandError(`${indexFile} has keys other than current (${keys.join(', ')}); add the topic by hand`);
-  }
-  let next: string;
-  if (/^current:\s*\{\s*\}\s*$/m.test(text)) {
-    next = text.replace(/^current:\s*\{\s*\}\s*$/m, `current:\n  ${topic}: ${id}`);
-  } else if (/^current:\s*$/m.test(text)) {
-    next = `${text.replace(/\s*$/, '')}\n  ${topic}: ${id}\n`;
+  const doc = readIndex(indexFile);
+  const current = doc.get('current');
+  if (isMap(current) && current.items.length > 0) {
+    if (current.get(topic) === id) return 'exists';
+    if (current.has(topic)) return 'conflict';
+    current.set(topic, id);
+  } else if (current === undefined || current === null || isMap(current)) {
+    // `current:` or `current: {}`: write the first topic in block style.
+    doc.set('current', doc.createNode({ [topic]: id }));
   } else {
-    next = `${text.replace(/\s*$/, '')}\ncurrent:\n  ${topic}: ${id}\n`;
+    throw new CommandError(`${indexFile}: current must be a mapping of topic to Decision Record id`);
   }
-  writeFileSync(indexFile, next.endsWith('\n') ? next : `${next}\n`);
+  writeIndex(indexFile, doc);
   return 'added';
 }
 
@@ -472,23 +478,21 @@ export function commandSupersede(root: string, oldId: string, options: { by?: st
   writeFileSync(newDoc.file, joinDocument(newSplit));
 
   if (indexFile && existsSync(indexFile)) {
-    const text = readFileSync(indexFile, 'utf8');
-    const current = ((parseYaml(text) ?? {}) as Record<string, unknown>).current as Record<string, unknown> | undefined;
-    const entries = Object.entries(current ?? {});
+    const doc = readIndex(indexFile);
+    const entries = Object.entries(((doc.toJS() ?? {}) as Record<string, unknown>).current ?? {});
     const oldTopics = entries.filter(([, value]) => value === oldId).map(([topic]) => topic);
     const newTopics = entries.filter(([, value]) => value === newId).map(([topic]) => topic);
-    let next = text;
     if (oldTopics.length === 0) {
       notes.push(`decision index had no topic for ${oldId}`);
     } else if (newTopics.length > 0) {
       // The replacement already stands under its own topic (DR-001 -> DR-004 precedent): retire the old one.
-      for (const topic of oldTopics) next = next.replace(new RegExp(`^[ \\t]+${escapeRegExp(topic)}:[ \\t]*${escapeRegExp(oldId)}[ \\t]*\\n`, 'm'), '');
+      for (const topic of oldTopics) doc.deleteIn(['current', topic]);
       notes.push(`retired topic ${oldTopics.join(', ')}; ${newId} stands under ${newTopics.join(', ')}`);
     } else {
-      next = next.replace(new RegExp(`^([ \\t]+[^:#]+:[ \\t]*)${escapeRegExp(oldId)}[ \\t]*$`, 'gm'), `$1${newId}`);
+      for (const topic of oldTopics) doc.setIn(['current', topic], newId);
       notes.push(`decision index topic ${oldTopics.join(', ')} now points at ${newId}`);
     }
-    if (next !== text) writeFileSync(indexFile, next);
+    if (oldTopics.length > 0) writeIndex(indexFile, doc);
   }
 
   const blocking = blockingErrors(root, before, checkKnowledge(root).errors, touched);
