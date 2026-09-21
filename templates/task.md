@@ -15,7 +15,8 @@ external_ref: # <system>:<id> when a tracker owns this task's status (DR-014)
 
 # TASK-NNN: <Title>
 
-<!-- Primary question: What bounded implementation work remains? -->
+<!-- Primary question: What bounded implementation work remains?
+     Close it with `npm run knowledge -- done <ID>` (status: done). -->
 
 ## Outcome
 

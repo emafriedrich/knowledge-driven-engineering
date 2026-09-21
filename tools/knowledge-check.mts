@@ -27,9 +27,11 @@ const VALID_STATUSES = new Set([
   'archived',
   'superseded',
   'current',
+  'done',
 ]);
 
-const ACTIVE_DECISION_STATUSES = new Set(['accepted', 'implemented']);
+// A decision is accepted until it is superseded; `implemented` belongs to specs (DR-016).
+const ACTIVE_DECISION_STATUSES = new Set(['accepted']);
 // Statuses that make a document part of current truth (and therefore worth anchoring in an index).
 const CURRENT_TRUTH_STATUSES = new Set(['accepted', 'implemented', 'current']);
 const REFERENCE_FIELDS = ['related', 'depends_on', 'supersedes', 'superseded_by'];
@@ -332,6 +334,9 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
     if (typeof status === 'string' && CURRENT_TRUTH_STATUSES.has(status) && values(data, 'authors').length === 0) {
       errors.push(`${relative(root, file)} has status ${status} but no authors (required in current truth)`);
     }
+    if (status === 'done' && values(data, 'authors').length === 0) {
+      errors.push(`${relative(root, file)} has status done but no authors (a closed task names who closed it)`);
+    }
 
     const typeTags = values(data, 'tags').filter((tag) => TYPE_TAGS.has(tag));
     if (typeTags.length === 0) {
@@ -347,6 +352,17 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
       }
     } else if (typeTags.length > 1) {
       errors.push(`${relative(root, file)} has multiple artifact type tags (${typeTags.join(', ')})`);
+    }
+
+    // One word, one meaning (DR-016): `implemented` is a spec whose acceptance
+    // block passed, and `done` is a closed task. Nothing else holds either.
+    const statusType = documentType(data);
+    if (status === 'implemented' && statusType !== 'spec') {
+      const replacement = statusType === 'task' ? 'done' : statusType === 'decision' || statusType === 'rfc' ? 'accepted' : 'current';
+      errors.push(`${relative(root, file)} has status implemented, which only a spec may hold (its acceptance block passed) — set it to ${replacement}`);
+    }
+    if (status === 'done' && statusType !== 'task') {
+      errors.push(`${relative(root, file)} has status done, which only a task may hold`);
     }
 
     for (const reference of values(data, 'external_ref')) {

@@ -148,7 +148,7 @@ npm run knowledge:check
 
 The validator scopes itself to cataloged knowledge trees; markdown elsewhere in the repository is ignored. It checks duplicate IDs, invalid statuses and dates, broken references, broken dependencies, supersession links, missing scopes, and stale decision-index targets. It also enforces that every knowledge document has parseable frontmatter and exactly one artifact type tag, that `scope` values are domains declared in the catalog, and it warns when a current-truth document is not referenced by any index or document.
 
-Since DR-007 and DR-008 the validator also enforces promotion gates on agent-drafted documents (an agent proposes, a human promotes), requires behavior documents entering current truth to be anchored to an active decision, and warns when a document is older than a dependency it relies on.
+Since DR-007 and DR-008 the validator also enforces promotion gates on agent-drafted documents (an agent proposes, a human promotes), requires behavior documents entering current truth to be anchored to an active decision, and warns when a document is older than a dependency it relies on. The promotion gate checks that an approver is recorded, not who typed it: without CODEOWNERS and branch protection, "a human promotes" is a procedural guarantee, not a technically enforced one.
 
 Two companion tools:
 
