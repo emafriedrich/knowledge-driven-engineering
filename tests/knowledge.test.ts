@@ -132,6 +132,26 @@ test('supersede: promotes a draft replacement under the old topic, links both re
   });
 });
 
+test('promote: an accepted Decision Record missing from the index is indexed, honouring --topic, without touching the record', () => {
+  withFixture({}, (root) => {
+    const indexFile = join(root, 'knowledge/test/decisions/index.yaml');
+    commandNew(root, 'decision', 'test', 'Lost record');
+    commandPromote(root, 'DR-001', { by: 'ema' });
+    writeFileSync(indexFile, 'current: {}\n');
+    const record = readFileSync(only(join(root, 'knowledge/test/decisions'), 'DR-001-'), 'utf8');
+
+    const result = commandPromote(root, 'DR-001', { by: 'someone-else', topic: 'foo' });
+    assert.match(result.notes.join('\n'), /already accepted and missing from the decision index/);
+    assert.deepEqual(parseYaml(readFileSync(indexFile, 'utf8')), { current: { foo: 'DR-001' } });
+    assert.equal(readFileSync(only(join(root, 'knowledge/test/decisions'), 'DR-001-'), 'utf8'), record);
+
+    // Indexed now: a further promote changes nothing and says where the record stands.
+    const again = commandPromote(root, 'DR-001', { by: 'ema', topic: 'bar' });
+    assert.deepEqual(again.changed, []);
+    assert.match(again.notes.join('\n'), /already accepted, indexed under foo/);
+  });
+});
+
 test('promote and supersede edit a decision index written in multi-line flow style, keeping its comments', () => {
   withFixture({}, (root) => {
     const indexFile = join(root, 'knowledge/test/decisions/index.yaml');

@@ -313,7 +313,9 @@ export function commandPromote(root: string, id: string, options: { by?: string;
     throw new CommandError(`${type} documents are ${spec.active} at most; implemented belongs to specs, whose acceptance block proves it (DR-016)`);
   }
   const status = String(document.data.status);
-  if (status === target) return { changed: [], notes: [`${id} is already ${status}`] };
+  // An accepted Decision Record missing from its index still gets indexed below; nothing else is left to do.
+  const already = status === target;
+  if (already && type !== 'decision') return { changed: [], notes: [`${id} is already ${status}`] };
   const acceptance: string[] = [];
   if (options.to === 'implemented') {
     // `implemented` earns its meaning (DR-015): the spec's acceptance block must pass here and now.
@@ -332,7 +334,7 @@ export function commandPromote(root: string, id: string, options: { by?: string;
   const doc = splitDocument(document.content);
   if (!doc) throw new CommandError(`${relative(root, document.file)} has no frontmatter`);
 
-  const touched = [document.file];
+  const touched = already ? [] : [document.file];
   let indexFile: string | null = null;
   let topic: string | null = null;
 
@@ -343,18 +345,24 @@ export function commandPromote(root: string, id: string, options: { by?: string;
     const fileSlug = basename(document.file, '.md').replace(new RegExp(`^${id}-?`), '');
     topic = options.topic ?? (fileSlug || slugify(String(document.data.title)));
     touched.push(indexFile);
+    if (already) {
+      const indexed = indexedTopics(indexFile, id);
+      if (indexed.length > 0) return { changed: [], notes: [`${id} is already ${status}, indexed under ${indexed.join(', ')}`] };
+    }
   }
 
   const before = checkKnowledge(root).errors;
   const saved = snapshot(touched);
 
-  const approvers = values(document.data, 'approved_by');
-  if (!approvers.includes(options.by)) approvers.push(options.by);
-  setField(doc.front, 'status', target);
-  setField(doc.front, 'updated', today());
-  setField(doc.front, 'approved_by', yamlList(approvers), ['drafted_by', 'authors', 'updated']);
-  if (values(document.data, 'authors').length === 0) setField(doc.front, 'authors', yamlList([options.by]), ['updated']);
-  writeFileSync(document.file, joinDocument(doc));
+  if (!already) {
+    const approvers = values(document.data, 'approved_by');
+    if (!approvers.includes(options.by)) approvers.push(options.by);
+    setField(doc.front, 'status', target);
+    setField(doc.front, 'updated', today());
+    setField(doc.front, 'approved_by', yamlList(approvers), ['drafted_by', 'authors', 'updated']);
+    if (values(document.data, 'authors').length === 0) setField(doc.front, 'authors', yamlList([options.by]), ['updated']);
+    writeFileSync(document.file, joinDocument(doc));
+  }
 
   const notes: string[] = [];
   if (indexFile && topic) {
@@ -373,6 +381,7 @@ export function commandPromote(root: string, id: string, options: { by?: string;
   }
 
   const changed = [...touched.map((file) => relative(root, file)), ...writeManifests(root)];
+  if (already) notes.push(`${id} was already ${status} and missing from the decision index`);
   if (topic) notes.push(`decision index topic: ${topic}`);
   if (acceptance.length > 0) notes.push(`acceptance checks passed:`, ...acceptance);
   return { changed, notes };
@@ -386,6 +395,12 @@ function readIndex(indexFile: string): Document {
   if (doc.errors.length > 0) throw new CommandError(`${indexFile} is not valid YAML: ${doc.errors[0].message}`);
   if (doc.contents !== null && !isMap(doc.contents)) throw new CommandError(`${indexFile} must be a mapping with a current key`);
   return doc;
+}
+
+function indexedTopics(indexFile: string, id: string): string[] {
+  if (!existsSync(indexFile)) return [];
+  const current = ((readIndex(indexFile).toJS() ?? {}) as Record<string, unknown>).current ?? {};
+  return Object.entries(current).filter(([, value]) => value === id).map(([topic]) => topic);
 }
 
 function writeIndex(indexFile: string, doc: Document): void {
