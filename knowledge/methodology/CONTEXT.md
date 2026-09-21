@@ -13,7 +13,7 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 | --- | --- | --- | --- |
 | product_vision | KDE-PV-001 | Knowledge-Driven Engineering product vision | 2026-08-30 |
 | lifecycle_flow | KDE-FLOW-001 | Knowledge evolution lifecycle | 2026-08-30 |
-| artifact_spec | KDE-SPEC-001 | Knowledge artifact and metadata rules | 2026-09-08 |
+| artifact_spec | KDE-SPEC-001 | Knowledge artifact and metadata rules | 2026-09-21 |
 | agent_context | KDE-PROMPT-001 | Coding agent context template | 2026-09-03 |
 | signals_playbook | KDE-PLAYBOOK-001 | Drafting knowledge from external signals | 2026-09-09 |
 
@@ -35,6 +35,8 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 | lifecycle-commands | DR-013 | Lifecycle transitions are commands that leave the repository valid or refuse | 2026-09-09 |
 | external-systems | DR-014 | External systems are raw signals or one-way mirrors; only a tracker may own task status | 2026-09-09 |
 | declared-drafts-and-acceptance | DR-015 | Implementing against a draft is declared, and implemented means the acceptance block passed | 2026-09-09 |
+| artifact-lifecycle | DR-016 | Implemented belongs to specs and a spec is warranted by a testable contract | 2026-09-21 |
+| agent-rules-ownership | DR-017 | The agent rules section is framework-owned and stale templates are reported | 2026-09-21 |
 
 ## Pending — NOT current truth, do not obey
 

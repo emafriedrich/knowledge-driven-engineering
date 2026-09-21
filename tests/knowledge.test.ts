@@ -200,7 +200,7 @@ test('done: closes a task, refuses non-tasks, and names the tracker ticket when 
     const file = only(join(root, 'knowledge/test/tasks'), 'TASK-001-');
     writeFileSync(file, readFileSync(file, 'utf8').replace(/^external_ref:.*$/m, 'external_ref: jira:PD-123'));
     const result = commandDone(root, 'TASK-001');
-    assert.equal(front(file).status, 'implemented');
+    assert.equal(front(file).status, 'done');
     assert.match(result.notes.join('\n'), /close jira:PD-123 there as well/);
     assert.deepEqual(checkKnowledge(root).errors, []);
     assert.deepEqual(commandDone(root, 'TASK-001').changed, [], 'idempotent');
@@ -209,7 +209,7 @@ test('done: closes a task, refuses non-tasks, and names the tracker ticket when 
     assert.throws(() => commandDone(root, 'TASK-002'), /done refused:\n- .*no authors/);
     assert.equal(front(only(join(root, 'knowledge/test/tasks'), 'TASK-002-')).status, 'draft', 'rolled back');
     commandDone(root, 'TASK-002', { by: 'ema' });
-    assert.equal(front(only(join(root, 'knowledge/test/tasks'), 'TASK-002-')).status, 'implemented');
+    assert.equal(front(only(join(root, 'knowledge/test/tasks'), 'TASK-002-')).status, 'done');
 
     commandNew(root, 'decision', 'test', 'Not a task');
     assert.throws(() => commandDone(root, 'DR-001'), /done closes tasks/);
@@ -242,6 +242,8 @@ test('accept: runs the acceptance fence and reports per command; promote --to im
     writeFileSync(spec, readFileSync(spec, 'utf8').replace(/```acceptance[\s\S]*?```\n/, '').replace('status: implemented', 'status: current'));
     assert.throws(() => commandPromote(root, 'SPEC-001', { by: 'ema', to: 'implemented' }), /has no acceptance block/);
     assert.throws(() => commandPromote(root, 'DR-001', { by: 'ema', to: 'current' }), /--to accepts only implemented/);
+    // implemented belongs to specs (DR-016): a decision is accepted until superseded.
+    assert.throws(() => commandPromote(root, 'DR-001', { by: 'ema', to: 'implemented' }), /implemented belongs to specs/);
     assert.throws(() => commandAccept(root, {}), /accept needs a <SPEC-ID>/);
   });
 });

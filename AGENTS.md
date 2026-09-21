@@ -57,6 +57,12 @@ Create an RFC when a change is significant, uncertain, cross-domain, or requires
 
 Create a Decision Record when the team makes an important product, UX, design, architecture, security, infrastructure, or business decision.
 
+RFC proposes. Decision Record decides. Spec promises. Tests prove. The size of the change picks the path: a simple decision may go straight from a Decision Record to code; complex behavior goes through a spec; large uncertainty starts with an RFC.
+
+Create or update a spec when behavior needs an explicit, independently testable contract — particularly when it involves multiple rules, interactions, invariants, edge cases, or acceptance criteria that should not have to be reconstructed from code and Decision Records. One further signal: rules expected to change while the decision stays. A Decision Record is superseded, not edited, so rules a team wants to edit belong in a spec anchored to it.
+
+A spec is not required merely because code cites a decision. Comments such as `// DR-017 rule 3` are desirable: they explain why code exists.
+
 Update an existing spec when intended behavior changes and the decision context already exists.
 
 Create or update a task only after the canonical knowledge that justifies it exists.
@@ -72,6 +78,8 @@ Create or update a task only after the canonical knowledge that justifies it exi
 - Keep prompts short and reference canonical IDs or paths.
 - Create knowledge documents with `npm run knowledge -- new <type> <domain> "<title>" --by agent`; add a missing domain with `npm run knowledge -- domain add <name> --description "<text>"`. Both run the validator and refresh manifests.
 - Never run `knowledge promote` or `knowledge supersede`. Promotion is human-only; tell the human the command instead.
+- Approval in chat is not promotion. Never write `approved_by` or promote a document on a human's behalf; prepare the document and give the human the promotion command to run.
+- `implemented` belongs to specs only, and only `promote --to implemented` sets it. Decision Records and RFCs stay `accepted`; tasks close with `knowledge done`.
 - Implementing against a draft spec is allowed and must be visible: write `implements-draft: <SPEC-ID>` in the PR description. The drift gate fails without it; the spec still needs a human to promote it.
 - Resolve an id collision with `npm run knowledge -- renumber <OLD-ID> <NEW-ID>`, not by hand.
 - After editing knowledge artifacts directly, run `npm run knowledge:check` and refresh manifests with `npm run knowledge:context -- --write`.

@@ -406,3 +406,32 @@ test('external systems (DR-014): external_ref needs a tracker shape and belongs 
     assert.deepEqual(domain.trackers, { jira: 'PD' }, 'non-string tracker keys are ignored');
   });
 });
+
+test('implemented belongs to specs and done to tasks; the error names the replacement', () => {
+  withFixture({
+    'knowledge/test/decisions/index.yaml': 'current:\n  topic.example: DR-001\n',
+    'knowledge/test/decisions/DR-001.md': frontmatter('DR-001', 'implemented'),
+    'knowledge/test/rfcs/RFC-001.md': frontmatter('RFC-001', 'implemented', { tags: '[rfc]' }),
+    'knowledge/test/tasks/TASK-001.md': frontmatter('TASK-001', 'implemented', { tags: '[]' }),
+    'knowledge/test/tasks/TASK-002.md': frontmatter('TASK-002', 'done', { tags: '[task]' }),
+    'knowledge/test/rfcs/RFC-002.md': frontmatter('RFC-002', 'done', { tags: '[rfc]' }),
+  }, (root) => {
+    const errors = checkKnowledge(root).errors.join('\n');
+    assert.match(errors, /DR-001\.md has status implemented, which only a spec may hold .* set it to accepted/);
+    assert.match(errors, /RFC-001\.md has status implemented, .* set it to accepted/);
+    assert.match(errors, /TASK-001\.md has status implemented, .* set it to done/, 'type inferred from the folder');
+    assert.match(errors, /RFC-002\.md has status done, which only a task may hold/);
+    assert.doesNotMatch(errors, /TASK-002/);
+    assert.match(errors, /DR-001/, 'an implemented decision is no longer active in the index');
+  });
+});
+
+test('an implemented spec anchored to an accepted decision stays valid', () => {
+  withFixture({
+    'knowledge/test/decisions/index.yaml': 'current:\n  topic.example: DR-001\n',
+    'knowledge/test/decisions/DR-001.md': frontmatter('DR-001', 'accepted'),
+    'knowledge/test/specs/SPEC-001.md': frontmatter('SPEC-001', 'implemented', { depends_on: '[DR-001]' }),
+  }, (root) => {
+    assert.deepEqual(checkKnowledge(root).errors, []);
+  });
+});

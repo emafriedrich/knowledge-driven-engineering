@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -58,7 +58,8 @@ test('installer stamps framework-owned files with the package.json version and r
     const upgraded = install(root, '--upgrade');
     assert.match(upgraded, new RegExp(`upgrade tools/knowledge-check\\.mts \\(0\\.0\\.9 -> ${version.replace(/\./g, '\\.')}\\)`));
     assert.match(upgraded, /WARN {2}tools\/drift-gate\.mts had local edits; overwritten with kde /);
-    assert.match(upgraded, /skip {2}templates\/rfc\.md/);
+    assert.match(upgraded, /note {2}templates\/rfc\.md differs from kde .* \(yours; not touched\)/);
+    assert.match(upgraded, /skip {2}templates\/spec\.md/, 'an untouched template is not noted');
     assert.doesNotMatch(upgraded, /WARN {2}framework-owned/);
     assert.equal(firstLine(check), `// kde-version: ${version}`);
     assert.doesNotMatch(readFileSync(join(root, 'tools/drift-gate.mts'), 'utf8'), /local edit/);
@@ -76,6 +77,55 @@ test('installer rejects unknown options', () => {
   const root = mkdtempSync(join(tmpdir(), 'kde-install-test-'));
   try {
     assert.throws(() => install(root, '--nope'), /unknown option --nope/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('a domain argument on an installed repository creates nothing and points at domain add', () => {
+  const root = mkdtempSync(join(tmpdir(), 'kde-install-test-'));
+  try {
+    install(root, 'shop');
+    const catalog = readFileSync(join(root, 'knowledge/index.yaml'), 'utf8');
+
+    const again = install(root, 'payments');
+    assert.match(again, /WARN {2}KDE is already installed here/);
+    assert.match(again, /npm run knowledge -- domain add payments/);
+    assert.equal(existsSync(join(root, 'knowledge/payments')), false, 'an uncataloged domain folder must not be created');
+    assert.equal(readFileSync(join(root, 'knowledge/index.yaml'), 'utf8'), catalog);
+
+    // Re-running the original command stays quiet: the domain already exists.
+    assert.doesNotMatch(install(root, 'shop'), /already installed/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('the kde section of AGENTS.md is framework-owned: reported when stale, replaced only between the markers on --upgrade', () => {
+  const root = mkdtempSync(join(tmpdir(), 'kde-install-test-'));
+  try {
+    writeFileSync(join(root, 'AGENTS.md'), '# Team rules\n\nUse tabs.\n\n');
+    install(root, 'shop');
+    const agents = join(root, 'AGENTS.md');
+    const fresh = readFileSync(agents, 'utf8');
+    assert.match(fresh, /Approval in chat is not promotion/);
+    assert.match(install(root), /ok {4}AGENTS\.md KDE section/);
+
+    // An older release's section, with adopter text on both sides of it.
+    const stale = fresh.replace(/<!-- kde:begin -->[\s\S]*<!-- kde:end -->/, '<!-- kde:begin -->\n## Knowledge-Driven Engineering\n\nOld rules.\n<!-- kde:end -->') + '\n## After\n\nKeep me.\n';
+    writeFileSync(agents, stale);
+    const plain = install(root);
+    assert.match(plain, /WARN {2}framework-owned files differ/);
+    assert.match(plain, /- AGENTS\.md:KDE-section/);
+    assert.equal(readFileSync(agents, 'utf8'), stale, 'a run without --upgrade must not rewrite the section');
+
+    assert.match(install(root, '--upgrade'), /upgrade AGENTS\.md KDE section/);
+    assert.equal(readFileSync(agents, 'utf8'), fresh + '\n## After\n\nKeep me.\n', 'only the text between the markers changes');
+
+    // A damaged section is left alone rather than guessed at.
+    writeFileSync(agents, stale.replace('<!-- kde:end -->', ''));
+    assert.match(install(root, '--upgrade'), /kde:begin marker without kde:end; section left alone/);
+    assert.match(readFileSync(agents, 'utf8'), /Keep me\./);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
