@@ -35,6 +35,11 @@ test('installer stamps framework-owned files with the package.json version and r
       assert.equal(firstLine(join(root, `tools/${tool}.mts`)), `// kde-version: ${version}`);
     }
     assert.equal(firstLine(join(root, '.github/workflows/kde.yml')), `# kde-version: ${version}`);
+    // Markdown framework files close their marker comment, so the marker stays invisible when rendered.
+    const protocol = join(root, 'tools/backfill-protocol.md');
+    assert.equal(firstLine(protocol), `<!-- kde-version: ${version} -->`);
+    assert.match(readFileSync(protocol, 'utf8'), /^# Backfill Protocol$/m);
+    assert.match(readFileSync(join(root, 'AGENTS.md'), 'utf8'), /read `tools\/backfill-protocol\.md` and follow it/);
 
     // Second run: everything up to date, nothing rewritten, no warning.
     const again = install(root);
@@ -63,6 +68,11 @@ test('installer stamps framework-owned files with the package.json version and r
     assert.doesNotMatch(upgraded, /WARN {2}framework-owned/);
     assert.equal(firstLine(check), `// kde-version: ${version}`);
     assert.doesNotMatch(readFileSync(join(root, 'tools/drift-gate.mts'), 'utf8'), /local edit/);
+
+    // The closing --> is not part of the version: an old markdown marker upgrades like any tool.
+    writeFileSync(protocol, readFileSync(protocol, 'utf8').replace(/^.*\n/, '<!-- kde-version: 0.0.9 -->\n'));
+    assert.match(install(root), /- tools\/backfill-protocol\.md/);
+    assert.match(install(root, '--upgrade'), new RegExp(`upgrade tools/backfill-protocol\\.md \\(0\\.0\\.9 -> ${version.replace(/\./g, '\\.')}\\)`));
     assert.match(readFileSync(join(root, 'templates/rfc.md'), 'utf8'), /## Team Section/, '--upgrade must not touch adopter-owned templates');
 
     // A copy from before markers existed is reported as pre-0.1.0, not as current.

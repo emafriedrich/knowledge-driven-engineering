@@ -232,7 +232,7 @@ Agents create and renumber; only humans promote and supersede.
 
 ### Brownfield Backfill
 
-When a domain's behavior already exists in code but not in `knowledge/` — the default situation when KDE arrives mid-project — recover it with a backfill session (DR-018) instead of an ad-hoc report. `knowledge backfill <domain>` starts or resumes the session; an agent following KDE-PROMPT-002 audits the code and presents each recovered rule with its evidence, and the human approves, rejects, or edits it on sight.
+When a domain's behavior already exists in code but not in `knowledge/` — the default situation when KDE arrives mid-project — recover it with a backfill session (DR-018) instead of an ad-hoc report. `knowledge backfill <domain>` starts or resumes the session; an agent following the protocol the installer ships as `tools/backfill-protocol.md` (KDE-PROMPT-002) audits the code and presents each recovered rule with its evidence, and the human approves, rejects, or edits it on sight.
 
 What lands where: approved behavior becomes **one spec per feature**, anchored to a per-domain **baseline Decision Record** that states honestly that observed behavior was adopted as current truth and the historical rationale was not recovered. Architectural stances get their own Decision Records instead of specs. Never a Decision Record per rule — backfill recovers the what, not the why, and reconstructed rationale is fabrication — and never a monolithic snapshot document, which has no per-rule lifecycle and competes with the catalog as a second source of truth.
 
