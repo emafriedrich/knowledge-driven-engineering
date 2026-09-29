@@ -243,13 +243,17 @@ test('backfill: the first run scaffolds the session and the baseline decision; r
     const sessionFile = join(root, 'knowledge/test/backfill.yaml');
     assert.ok(existsSync(sessionFile));
     assert.deepEqual(parseYaml(readFileSync(sessionFile, 'utf8')), { rules: [] });
-    assert.match(result.notes.join('\n'), /promote DR-001 --by <you> with the first approval/);
+    assert.match(result.notes.join('\n'), /backfill session opened for test: baseline DR-001 \(draft\), state in knowledge\/test\/backfill\.yaml/);
+    assert.match(result.notes.join('\n'), /the audit is your coding agent's job:\n {2}ask it to "backfill the test domain"; it follows tools\/backfill-protocol\.md/);
+    assert.match(result.notes.join('\n'), /tools\/backfill-protocol\.md is missing — refresh the framework files with install\.sh --upgrade/);
+    assert.doesNotMatch(readFileSync(baseline, 'utf8') + readFileSync(join(root, 'knowledge/test/backfill.yaml'), 'utf8'), /KDE-RFC|DR-0\d\d \(/, 'generated adopter text cites no framework ids');
     assert.deepEqual(checkKnowledge(root).errors, []);
 
     // A re-run creates nothing new and reports the (empty) session.
     const again = commandBackfill(root, 'test');
     assert.deepEqual(again.changed, []);
     assert.match(again.notes.join('\n'), /0 rules — 0 approved, 0 rejected, 0 pending/);
+    assert.match(again.notes.join('\n'), /ask it to "backfill the test domain"/, 'an unaudited session says the next move is the agent\'s');
     assert.equal(readdirSync(join(root, 'knowledge/test/decisions')).filter((name) => name.startsWith('DR-')).length, 1, 'one baseline only');
 
     // Resumability: dispositions recorded in the session file drive what a re-run reports.
@@ -271,6 +275,10 @@ test('backfill: the first run scaffolds the session and the baseline decision; r
     assert.match(resumed.notes.join('\n'), /3 rules — 1 approved, 1 rejected, 1 pending/);
     assert.match(resumed.notes.join('\n'), /pending: Pickup orders skip delivering/);
     assert.match(resumed.notes.join('\n'), /baseline DR-001 is a draft — promote/);
+    assert.match(resumed.notes.join('\n'), /ask it to "continue the backfill of the test domain"/);
+    mkdirSync(join(root, 'tools'), { recursive: true });
+    writeFileSync(join(root, 'tools/backfill-protocol.md'), '# Backfill Protocol\n');
+    assert.doesNotMatch(commandBackfill(root, 'test').notes.join('\n'), /is missing/);
 
     // The full loop stays valid: promote the baseline, anchor a feature spec to it.
     commandPromote(root, 'DR-001', { by: 'ema' });
