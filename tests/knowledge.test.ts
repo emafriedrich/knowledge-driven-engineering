@@ -334,6 +334,12 @@ test('prompt: new scaffolds from the template and promote sets current — promp
   });
 });
 
+test('a command run where the catalog has no domains says the directory may be the wrong one', () => {
+  withFixture({ 'knowledge/index.yaml': 'domains: {}\n' }, (root) => {
+    assert.throws(() => commandBackfill(root, 'orders'), /has no domains at all — if this repository runs KDE from another directory, run the command there/);
+  });
+});
+
 test('cli: usage errors are CommandErrors, and flags with several values are collected', () => {
   withFixture({}, (root) => {
     assert.throws(() => run(root, ['promote']), /usage:/);
