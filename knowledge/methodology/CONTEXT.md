@@ -37,6 +37,7 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 | declared-drafts-and-acceptance | DR-015 | Implementing against a draft is declared, and implemented means the acceptance block passed | 2026-09-09 |
 | artifact-lifecycle | DR-016 | Implemented belongs to specs and a spec is warranted by a testable contract | 2026-09-21 |
 | agent-rules-ownership | DR-017 | The agent rules section is framework-owned and stale templates are reported | 2026-09-21 |
+| backfill | DR-018 | Backfill recovers observed behavior into feature specs anchored to a baseline decision | 2026-09-29 |
 
 ## Pending — NOT current truth, do not obey
 

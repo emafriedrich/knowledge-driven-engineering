@@ -223,11 +223,20 @@ Every transition above is one command (DR-013); each ends by running the validat
 - `npm run knowledge -- promote <ID> --by <human> [--topic <name>]` — set the active status, record the approver, index a decision under its topic. Refused, with the validator's reason, when the document is not ready.
 - `npm run knowledge -- supersede <OLD-ID> --by <NEW-ID> [--approved-by <human>]` — link both records, re-point or retire the topic, promote a draft replacement, list the documents that depend on the old one.
 - `npm run knowledge -- domain add <name> --description "<text>" [--code-paths a/ b/]` — directory, README, empty decision index, catalog entry, manifest.
+- `npm run knowledge -- backfill <domain>` — start or resume a brownfield backfill session (DR-018): scaffold the session file and the draft baseline decision, or report what is approved, rejected, and still pending.
 - `npm run knowledge -- renumber <OLD-ID> <NEW-ID>` — rewrite an id everywhere at once when two branches allocated the same number.
 - `npm run knowledge -- done <TASK-ID> [--by <name>]` — close a task with status `done`; names its tracker ticket when it has one.
 - `npm run knowledge -- accept <SPEC-ID>` — run a spec's acceptance block; `promote <SPEC-ID> --by <human> --to implemented` runs it and promotes only if it passes. `implemented` exists only on specs.
 
 Agents create and renumber; only humans promote and supersede.
+
+### Brownfield Backfill
+
+When a domain's behavior already exists in code but not in `knowledge/` — the default situation when KDE arrives mid-project — recover it with a backfill session (DR-018) instead of an ad-hoc report. `knowledge backfill <domain>` starts or resumes the session; an agent following KDE-PROMPT-002 audits the code and presents each recovered rule with its evidence, and the human approves, rejects, or edits it on sight.
+
+What lands where: approved behavior becomes **one spec per feature**, anchored to a per-domain **baseline Decision Record** that states honestly that observed behavior was adopted as current truth and the historical rationale was not recovered. Architectural stances get their own Decision Records instead of specs. Never a Decision Record per rule — backfill recovers the what, not the why, and reconstructed rationale is fabrication — and never a monolithic snapshot document, which has no per-rule lifecycle and competes with the catalog as a second source of truth.
+
+Evidence is cited by stable identifiers (paths, symbols, test names), never `file:line`. Approval is the verification: a rule whose evidence does not convince the reviewer is rejected or edited, not approved with a caveat. Sessions are resumable through `knowledge/<domain>/backfill.yaml`, which is session history — archive or delete it once the domain is mined. Backfilling a single domain and leaving the rest of the codebase unmapped is fully supported.
 
 ## Change Propagation
 
