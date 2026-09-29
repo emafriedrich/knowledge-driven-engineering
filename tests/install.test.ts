@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -78,6 +78,24 @@ test('installer stamps framework-owned files with the package.json version and r
     // A copy from before markers existed is reported as pre-0.1.0, not as current.
     writeFileSync(check, readFileSync(check, 'utf8').replace(/^.*\n/, ''));
     assert.match(install(root), /\(installed: pre-0\.1\.0\)/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('installer refuses a subdirectory of a repository that already runs KDE, and suggests backfill as a next step', () => {
+  const root = mkdtempSync(join(tmpdir(), 'kde-install-test-'));
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root });
+    const fresh = install(root, 'shop');
+    assert.match(fresh, /Existing codebase\? Recover the behavior that lives only in code[\s\S]*npm run knowledge -- backfill shop[\s\S]*"backfill the shop domain" — it follows tools\/backfill-protocol\.md/);
+    assert.match(fresh, /Starting fresh\? Seed current truth/);
+
+    const nested = join(root, 'apps', 'api');
+    mkdirSync(nested, { recursive: true });
+    assert.throws(() => install(nested, '--upgrade'), /already runs Knowledge-Driven Engineering; run the installer from there, not from .*apps\/api/);
+    assert.equal(existsSync(join(nested, 'knowledge')), false, 'nothing is written in the subdirectory');
+    assert.equal(existsSync(join(nested, 'tools')), false);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
