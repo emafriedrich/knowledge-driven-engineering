@@ -4,6 +4,10 @@
 
 Knowledge-Driven Engineering (KDE) is a lightweight system for keeping a project's decisions and behavior rules in the repository — versioned, validated in CI, and retrievable by humans and agents before they change anything. Markdown files, a validator, and a handful of commands. No server, no database, no new place to look.
 
+It works best when a project starts with it: every decision is recorded as it is made, and there is no knowledge to recover from existing code. But no worries: it works well in an existing project too — see [Quick Start](#quick-start).
+
+To install, run this from the root of your repository, with the name of your first domain:
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/main/install.sh | bash -s -- <your-first-domain>
 ```
@@ -37,9 +41,11 @@ The first production adoption was a multi-tenant marketplace, four months into d
 - **Diffing knowledge against code caught a wrong decision.** An *accepted* Decision Record turned out to describe behavior the code did not have. Because the decision was a canonical, indexed record, the contradiction was detectable, and it was fixed through the normal draft-and-promote flow instead of surfacing as a production bug.
 - **One backfilled domain paid for itself.** Auditing a single domain — login, sessions, user management, about fifty files — recovered 22 behavior rules into three feature specs, each rule with its evidence and, where one exists, the test that proves it. The same pass reported two accepted decisions that were never implemented, one decision the code had outgrown, and three defects, two of them security issues. Nobody had asked about any of them.
 
+That marketplace is a private product, so its code and knowledge cannot be published, and the evidence above is described rather than linked. We are working on publishing evidence that can be checked without breaking any contract, and expect to share it in the short term.
+
 ## Quick Start
 
-### An existing codebase (the usual case)
+### An existing codebase
 
 From the root of your repository:
 
@@ -53,6 +59,8 @@ Then ask your coding agent to **"backfill the orders domain"**. There is nothing
 Add more domains as you go (`npm run knowledge -- domain add payments --description "..." --code-paths src/payments/`) and backfill each one when you need it. Adopting in a single domain is fully supported.
 
 ### A new project
+
+This is where KDE gives the most. Knowledge is written down as decisions are made, so current truth is complete from the first commit: the retrieval path never falls back to guessing from code, and the drift gate guards every domain from day one.
 
 Seed current truth with one decision your team already made:
 
