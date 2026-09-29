@@ -6,7 +6,7 @@ import test from 'node:test';
 import { parse as parseYaml } from 'yaml';
 
 import { checkKnowledge } from '../tools/knowledge-check.mts';
-import { CommandError, commandAccept, commandDomainAdd, commandDone, commandNew, commandPromote, commandRenumber, commandSupersede, run } from '../tools/knowledge.mts';
+import { CommandError, commandAccept, commandBackfill, commandDomainAdd, commandDone, commandNew, commandPromote, commandRenumber, commandSupersede, run } from '../tools/knowledge.mts';
 
 const repo = resolve(import.meta.dirname, '..');
 const CATALOG = 'domains:\n  test:\n    path: knowledge/test\n    description: Test domain.\n';
@@ -228,6 +228,101 @@ test('renumber: rewrites the id in the document, its file name, references and t
     assert.match(result.changed.join('\n'), /DR-001-base\.md -> knowledge\/test\/decisions\/DR-010-base\.md/);
     assert.throws(() => commandRenumber(root, 'DR-010', 'SPEC-001'), /already used/);
     assert.throws(() => commandRenumber(root, 'DR-010', 'dr-11'), /not a valid id/);
+  });
+});
+
+test('backfill: the first run scaffolds the session and the baseline decision; re-runs report the remainder', () => {
+  withFixture({}, (root) => {
+    const result = commandBackfill(root, 'test');
+    const baseline = only(join(root, 'knowledge/test/decisions'), 'DR-001-');
+    const data = front(baseline);
+    assert.equal(data.status, 'draft');
+    assert.equal(data.drafted_by, 'agent');
+    assert.equal(data.tags, '[decision, backfill]');
+    assert.match(readFileSync(baseline, 'utf8'), /observed behavior at the time KDE was adopted/);
+    const sessionFile = join(root, 'knowledge/test/backfill.yaml');
+    assert.ok(existsSync(sessionFile));
+    assert.deepEqual(parseYaml(readFileSync(sessionFile, 'utf8')), { rules: [] });
+    assert.match(result.notes.join('\n'), /promote DR-001 --by <you> with the first approval/);
+    assert.deepEqual(checkKnowledge(root).errors, []);
+
+    // A re-run creates nothing new and reports the (empty) session.
+    const again = commandBackfill(root, 'test');
+    assert.deepEqual(again.changed, []);
+    assert.match(again.notes.join('\n'), /0 rules — 0 approved, 0 rejected, 0 pending/);
+    assert.equal(readdirSync(join(root, 'knowledge/test/decisions')).filter((name) => name.startsWith('DR-')).length, 1, 'one baseline only');
+
+    // Resumability: dispositions recorded in the session file drive what a re-run reports.
+    writeFileSync(sessionFile, [
+      'rules:',
+      '  - rule: Price tolerance is 2 percent',
+      '    evidence: order-price-tolerance.ts',
+      '    disposition: approved',
+      '    spec: SPEC-001',
+      '  - rule: Pickup orders skip delivering',
+      '    evidence: none',
+      '    disposition: pending',
+      '  - rule: Orders expire after a day',
+      '    evidence: none found',
+      '    disposition: rejected',
+      '',
+    ].join('\n'));
+    const resumed = commandBackfill(root, 'test');
+    assert.match(resumed.notes.join('\n'), /3 rules — 1 approved, 1 rejected, 1 pending/);
+    assert.match(resumed.notes.join('\n'), /pending: Pickup orders skip delivering/);
+    assert.match(resumed.notes.join('\n'), /baseline DR-001 is a draft — promote/);
+
+    // The full loop stays valid: promote the baseline, anchor a feature spec to it.
+    commandPromote(root, 'DR-001', { by: 'ema' });
+    commandNew(root, 'spec', 'test', 'Order pricing', { by: 'agent' });
+    const spec = only(join(root, 'knowledge/test/specs'), 'SPEC-001-');
+    writeFileSync(spec, readFileSync(spec, 'utf8').replace('depends_on: []', 'depends_on: [DR-001]'));
+    commandPromote(root, 'SPEC-001', { by: 'ema' });
+    assert.deepEqual(checkKnowledge(root).errors, []);
+    const done = commandBackfill(root, 'test');
+    assert.match(done.notes.join('\n'), /baseline: DR-001 \(accepted\)/);
+
+    // Malformed session state is refused with its location, not silently skipped.
+    writeFileSync(sessionFile, 'rules:\n  - rule: Something\n    disposition: maybe\n');
+    assert.throws(() => commandBackfill(root, 'test'), /rules\[0\] disposition must be pending, approved or rejected, got maybe/);
+    writeFileSync(sessionFile, 'rules:\n  - disposition: pending\n');
+    assert.throws(() => commandBackfill(root, 'test'), /rules\[0\] has no rule text/);
+    writeFileSync(sessionFile, 'notes: []\n');
+    assert.throws(() => commandBackfill(root, 'test'), /must have a rules list/);
+    assert.throws(() => commandBackfill(root, 'nowhere'), /not in any catalog/);
+  });
+});
+
+test('backfill: a complete session says so, and approved rules without a spec are flagged', () => {
+  withFixture({}, (root) => {
+    commandBackfill(root, 'test');
+    writeFileSync(join(root, 'knowledge/test/backfill.yaml'), [
+      'rules:',
+      '  - rule: Rule with a home',
+      '    disposition: approved',
+      '    spec: SPEC-001',
+      '  - rule: Rule without a home',
+      '    disposition: approved',
+      '',
+    ].join('\n'));
+    const notes = commandBackfill(root, 'test').notes.join('\n');
+    assert.match(notes, /no pending rules — the session is complete/);
+    assert.match(notes, /1 approved rule\(s\) name no spec/);
+  });
+});
+
+test('prompt: new scaffolds from the template and promote sets current — prompts are lifecycle citizens (DR-013)', () => {
+  withFixture({}, (root) => {
+    commandNew(root, 'prompt', 'test', 'Backfill session protocol', { by: 'agent' });
+    const file = only(join(root, 'knowledge/test/prompts'), 'PROMPT-001-');
+    assert.equal(front(file).status, 'draft');
+    assert.equal(front(file).drafted_by, 'agent');
+    const result = commandPromote(root, 'PROMPT-001', { by: 'ema' });
+    assert.equal(front(file).status, 'current');
+    assert.equal(front(file).approved_by, '[ema]');
+    assert.equal(front(file).authors, '[ema]');
+    assert.ok(result.changed.some((name) => name.includes('PROMPT-001')));
+    assert.deepEqual(checkKnowledge(root).errors, []);
   });
 });
 
