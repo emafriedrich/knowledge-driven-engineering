@@ -59,12 +59,27 @@ curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engin
 6. **Seed current truth.** Write the first Decision Record for a decision your team already made, list it in the domain `decisions/index.yaml`, and anchor the domain in `knowledge/index.yaml`. One real decision beats ten empty folders.
 7. **Grow on demand.** Add artifact folders (`specs/`, `flows/`, `rfcs/`) only when the domain has real content of that type, and new domains only when work needs a stable retrieval boundary.
 
+## Adopting On An Existing Codebase (Backfill)
+
+Step 6 assumes you remember your decisions. On a codebase that has been shipping for months, much of the knowledge exists only in code — and that is the default adoption, not the exception. Recover it with a backfill session (DR-018) instead of documenting from now on and leaving the past dark:
+
+```bash
+npm run knowledge -- backfill <domain>
+```
+
+The first run scaffolds `knowledge/<domain>/backfill.yaml` (session state) and a draft **baseline Decision Record** stating that the rules about to be recovered describe observed behavior at adoption time, with no reconstructed rationale. Then hand your coding agent the protocol in [KDE-PROMPT-002](knowledge/methodology/prompts/backfill-agent.md): it audits the domain's code, diffs what it finds against any existing knowledge, and presents each rule one at a time — the rule, its evidence (paths, symbols, test names; never `file:line`), and any conflict. You approve, reject, or edit each rule as you see it; running the `promote` command the agent hands you is the approval.
+
+Approved behavior lands as **one spec per feature** anchored to the baseline record, born with its proving test named in Acceptance Checks. Architectural stances (infrastructure, caching, eventing) become their own Decision Records. Nothing lands in a standalone report: a snapshot document has no per-rule lifecycle and starts contradicting the code within days, while the generated `CONTEXT.md` already gives you the readable summary for free.
+
+Interrupted sessions resume: re-running the command reports what is approved, rejected, and still pending, so the agent presents only the remainder. Backfilling one domain and leaving the rest of the codebase unmapped is fully supported — the drift gate ignores code outside cataloged `code_paths`.
+
 ## Lifecycle Commands
 
 `npm run knowledge -- <command>` performs each lifecycle transition as one step and leaves the repository valid or explains why it refused:
 
 ```bash
 npm run knowledge -- domain add orders --description "Order lifecycle" --code-paths src/orders/
+npm run knowledge -- backfill orders
 npm run knowledge -- new decision orders "Orders are immutable after payment" --author <you>
 npm run knowledge -- promote DR-001 --by <you>
 npm run knowledge -- supersede DR-001 --by DR-002 --approved-by <you>

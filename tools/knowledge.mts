@@ -7,6 +7,7 @@
 //   knowledge promote <ID> --by <human> [--topic <name>] [--to implemented]
 //   knowledge supersede <OLD-ID> --by <NEW-ID> [--approved-by <human>]
 //   knowledge domain add <name> --description "<text>" [--code-paths a/ b/] [--catalog <file>]
+//   knowledge backfill <domain>
 //   knowledge renumber <OLD-ID> <NEW-ID>
 //   knowledge done <TASK-ID> [--by <name>]
 //   knowledge accept <SPEC-ID> | --promoted <base-ref>
@@ -595,6 +596,134 @@ export function commandDomainAdd(
   return { changed: [...changed, ...writeManifests(root)], notes: [] };
 }
 
+// --- backfill -------------------------------------------------------------------
+// Brownfield onboarding (KDE-RFC-013): starts or resumes a backfill session for
+// a domain whose behavior already exists in code. The command scaffolds and
+// reports session state; the audit is the agent's job, approval happens with
+// each rule in front of the human, and every promotion stays a human's (DR-007).
+
+const DISPOSITIONS = new Set(['pending', 'approved', 'rejected']);
+
+function backfillBaseline(
+  root: string,
+  domain: CatalogDomain,
+  documents: { file: string; data: Record<string, unknown> }[],
+): { id: string; status: string } | null {
+  for (const document of documents) {
+    if (documentType(document.data) !== 'decision') continue;
+    if (!values(document.data, 'tags').includes('backfill')) continue;
+    const rel = relative(root, document.file).replace(/\\/g, '/');
+    if (domain.path && rel.startsWith(domain.path.replace(/\/$/, '') + '/')) {
+      return { id: String(document.data.id), status: String(document.data.status) };
+    }
+  }
+  return null;
+}
+
+function baselineBody(id: string, domainName: string): string {
+  return `# ${id}: Backfill baseline for ${domainName}
+
+## Context
+
+KDE was adopted after this domain's code was already in production, so its
+rules existed only in implementation. A backfill session (KDE-RFC-013) is
+recovering them: an agent audits the code and presents each rule with its
+evidence, and a human approves or rejects it on sight.
+
+## Decision
+
+The rules recovered by backfill and approved by a human describe the system's
+observed behavior at the time KDE was adopted, and are adopted as current
+truth. Historical rationale was not recovered and is not reconstructed: where
+a why matters, it gets its own Decision Record.
+
+## Consequences
+
+- Backfilled specs anchor to this record through depends_on, one spec per feature.
+- A rule whose evidence does not convince the reviewer is rejected or edited, never approved with a caveat.
+- Architectural stances recovered by the session become their own Decision Records instead of specs.
+
+## Supersession
+
+<!-- If this replaces another decision, link it here and update the old record. -->
+`;
+}
+
+export function commandBackfill(root: string, domainName: string): CommandResult {
+  const { domain } = findDomain(root, domainName);
+  if (!domain.path) throw new CommandError(`domain ${domainName} has no path in its catalog`);
+  const sessionFile = join(root, domain.path, 'backfill.yaml');
+  const changed: string[] = [];
+  const notes: string[] = [];
+
+  let baseline = backfillBaseline(root, domain, checkKnowledge(root).documents);
+
+  if (!existsSync(sessionFile)) {
+    if (!baseline) {
+      const created = commandNew(root, 'decision', domainName, `Backfill baseline for ${domainName}`, { by: 'agent' });
+      const file = join(root, created.changed[0]);
+      const doc = splitDocument(readFileSync(file, 'utf8'))!;
+      const id = doc.front.find((line) => line.startsWith('id:'))!.slice(3).trim();
+      setField(doc.front, 'tags', '[decision, backfill]');
+      writeFileSync(file, joinDocument({ front: doc.front, body: baselineBody(id, domainName) }));
+      changed.push(created.changed[0]);
+      baseline = { id, status: 'draft' };
+    }
+    writeFileSync(sessionFile, [
+      `# Backfill session state for ${domainName} (KDE-RFC-013).`,
+      '# The agent records each rule it presents; the disposition is recorded as the',
+      '# human gives it. Approved rules live on as specs — this file is session',
+      '# history, never current truth. Archive or delete it once the domain is mined.',
+      '# Each rule: { rule, evidence, disposition: pending|approved|rejected, spec?, note? }',
+      'rules: []',
+      '',
+    ].join('\n'));
+    changed.push(relative(root, sessionFile));
+    notes.push(
+      'backfill session started — protocol:',
+      '  1. audit the domain code; record each recovered rule in backfill.yaml as pending',
+      '  2. present rules one at a time with evidence (paths, symbols, tests — never file:line)',
+      '  3. approved behavior goes to one spec per feature, depends_on the baseline decision',
+      '  4. architectural stances get their own Decision Record instead of a spec',
+      `  5. promotion stays human (DR-007): npm run knowledge -- promote ${baseline.id} --by <you> with the first approval`,
+    );
+  } else {
+    const parsed = (parseYaml(readFileSync(sessionFile, 'utf8')) ?? {}) as { rules?: unknown };
+    if (!Array.isArray(parsed.rules)) throw new CommandError(`${relative(root, sessionFile)} must have a rules list`);
+    const counts = { pending: 0, approved: 0, rejected: 0 };
+    const pending: string[] = [];
+    let unrecorded = 0;
+    parsed.rules.forEach((entry, index) => {
+      const rule = entry as { rule?: unknown; disposition?: unknown; spec?: unknown };
+      if (typeof rule?.rule !== 'string' || !rule.rule.trim()) {
+        throw new CommandError(`${relative(root, sessionFile)}: rules[${index}] has no rule text`);
+      }
+      const disposition = String(rule.disposition ?? '');
+      if (!DISPOSITIONS.has(disposition)) {
+        throw new CommandError(`${relative(root, sessionFile)}: rules[${index}] disposition must be pending, approved or rejected, got ${disposition || '(none)'}`);
+      }
+      counts[disposition as keyof typeof counts] += 1;
+      if (disposition === 'pending') pending.push(rule.rule);
+      if (disposition === 'approved' && !rule.spec) unrecorded += 1;
+    });
+    notes.push(`session: ${parsed.rules.length} rules — ${counts.approved} approved, ${counts.rejected} rejected, ${counts.pending} pending`);
+    for (const rule of pending) notes.push(`  pending: ${rule}`);
+    if (unrecorded > 0) notes.push(`${unrecorded} approved rule(s) name no spec — record where each one landed`);
+    if (baseline) {
+      notes.push(baseline.status === 'draft'
+        ? `baseline ${baseline.id} is a draft — promote it with the first approval: npm run knowledge -- promote ${baseline.id} --by <you>`
+        : `baseline: ${baseline.id} (${baseline.status})`);
+    } else {
+      notes.push('no baseline decision carries the backfill tag — backfilled specs have nothing to anchor to');
+    }
+    if (parsed.rules.length > 0 && counts.pending === 0) {
+      notes.push('no pending rules — the session is complete; archive or delete backfill.yaml once the domain is mined');
+    }
+  }
+
+  return { changed: [...changed, ...writeManifests(root)], notes };
+}
+
 // --- renumber -------------------------------------------------------------------
 // Rewrites an id everywhere it appears — the document, its file name, every
 // reference in other documents, decision indexes and catalogs — so resolving
@@ -770,6 +899,7 @@ const USAGE = `usage:
   knowledge promote <ID> --by <human> [--topic <name>] [--to implemented]
   knowledge supersede <OLD-ID> --by <NEW-ID> [--approved-by <human>]   (promotes a draft NEW-ID)
   knowledge domain add <name> --description "<text>" [--code-paths a/ b/] [--catalog knowledge/index.yaml]
+  knowledge backfill <domain>   (starts or resumes a brownfield backfill session, KDE-RFC-013)
   knowledge renumber <OLD-ID> <NEW-ID>
   knowledge done <TASK-ID> [--by <name>]
   knowledge accept <SPEC-ID> | --promoted <base-ref>
@@ -797,6 +927,9 @@ export function run(root: string, argv: string[]): CommandResult {
     case 'domain':
       if (rest[0] !== 'add' || rest.length !== 2) throw new CommandError(USAGE);
       return commandDomainAdd(root, rest[1], { description: one('description'), codePaths: flags['code-paths'], catalog: one('catalog') });
+    case 'backfill':
+      if (rest.length !== 1) throw new CommandError(USAGE);
+      return commandBackfill(root, rest[0]);
     case 'renumber':
       if (rest.length !== 2) throw new CommandError(USAGE);
       return commandRenumber(root, rest[0], rest[1]);
