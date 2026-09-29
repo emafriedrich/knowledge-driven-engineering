@@ -24,7 +24,7 @@ KDE treats knowledge like code: it lives in the repository, it has a lifecycle, 
 
 - **Current truth is computable.** Decision Records keep history; a small index per domain answers "which decisions apply *today*?" in a form an agent consumes directly.
 - **Sources have an explicit precedence.** When a decision, a spec, and the code disagree, the order is written down — and the rule is to *report* the conflict, never resolve it silently.
-- **Agents get a bounded retrieval path.** Not "read the docs": identify the domain, read its generated `CONTEXT.md`, its active decisions and current spec, and only then the code.
+- **Agents get a bounded retrieval path.** Not "read the docs": identify the domain, read its generated `CONTEXT.md`, its active decisions and current spec, and only then the code. It is also far cheaper: in the field, reconstructing one domain's rules from its code cost an agent about 130,000 tokens, and the knowledge that came out of it reads in about 8,000. Agents still read the code they change; what they stop doing is re-deriving the rules from it.
 - **Agents propose; humans promote.** An agent drafts anything; nothing it drafts becomes current truth until a human runs the promotion command.
 - **Knowledge integrity runs in CI.** The validator checks the knowledge graph the way a linter checks code; a drift gate fails a pull request that changes a domain's behavior without touching its knowledge; a spec's acceptance block proves it with your own tests.
 - **Existing code is not a dead end.** A backfill session recovers the rules that live only in your code into specs you approve one by one.
