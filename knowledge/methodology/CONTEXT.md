@@ -41,7 +41,6 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 
 ## Pending — NOT current truth, do not obey
 
-- `KDE-PROMPT-002` (draft, agent-drafted): Backfill session protocol
 - `KDE-RFC-010` (draft, agent-drafted): Distribute framework tooling as an npm package
 
 ## Rules

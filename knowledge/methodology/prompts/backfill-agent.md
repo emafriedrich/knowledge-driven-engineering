@@ -1,11 +1,12 @@
 ---
 id: KDE-PROMPT-002
 title: Backfill session protocol
-status: draft
+status: current
 created: 2026-09-29
 updated: 2026-09-29
+authors: [emafriedrich]
 drafted_by: agent
-approved_by: []
+approved_by: [emafriedrich]
 scope: [methodology]
 tags: [prompt, agents, backfill]
 depends_on: []
