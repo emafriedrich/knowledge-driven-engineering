@@ -299,3 +299,23 @@ Create a Contract when a client — a frontend, an integration, an agent — wou
 Create a prompt when repeated agent work needs scoped context.
 
 Create a task when someone needs to execute bounded work.
+
+## Relation to OKF
+
+Google Cloud's [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) shares KDE's substrate: markdown with YAML frontmatter, cross-linked, versioned in git. It addresses a different layer. This comparison is as of OKF v0.2; the spec is young and changes between minor versions.
+
+| | OKF | KDE |
+| --- | --- | --- |
+| What it is | An interchange format | A governance process for knowledge |
+| On errors | Tolerant consumers: best effort, never reject a bundle for broken links or unknown fields | A strict gate: the validator fails CI |
+| Typical knowledge | Metadata about data and systems — tables, metrics, catalogs | Product rules and decisions for agents that change code |
+| Trust | Recorded: `verified` lists `{by, at}` events; a `human:` actor makes a document human-reviewed | Enforced: an agent-drafted document enters current truth only through human promotion |
+| Lifecycle | `status: draft \| stable \| deprecated`, plus `stale_after` | Supersession with history, a computed index of what applies today, and the list of dependents a supersession affects |
+| History and audit | `log.md` prose history per directory; `generated` and `verified` timestamps | Decision Records are superseded, never edited; approver and date are recorded on promotion; acceptance blocks can be rerun to show a spec still holds |
+| Retrieval for a task | `index.md` files for progressive disclosure; how to consume is left to the reader | A prescribed path: domain, generated `CONTEXT.md`, active decisions, current spec, then code |
+| Conflicting sources | Not addressed | Explicit precedence; conflicts are reported, never resolved silently |
+| Relation to code | None | Drift gate on pull requests; acceptance blocks run the project's tests |
+
+OKF has what KDE does not: per-claim provenance (`sources` with footnote ids), an explicit expiry (`stale_after`), several independent verifications per document, and attested computations — sanctioned calculations an agent may parameterize but not modify, checked by deterministic code.
+
+A KDE repository is not an OKF bundle today: OKF requires a non-empty `type` in the frontmatter of every markdown file other than `index.md` and `log.md`, and KDE derives the type from the folder and the id prefix, and generates `CONTEXT.md` without frontmatter.

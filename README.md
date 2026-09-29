@@ -137,7 +137,13 @@ Skip it for throwaway prototypes, single-purpose scripts, and code whose meaning
 
 The pieces are deliberately familiar: Decision Records (Nygard's ADRs), RFC processes, spec-driven development, the `AGENTS.md` convention, and domain partitioning from DDD. KDE is an operational synthesis for teams where agents implement, and its delta is what that tradition leaves out: a computable projection of current truth, explicit precedence between sources, consumption rules for agents, knowledge integrity as CI, and a governed path for knowledge that so far exists only in code.
 
-The substrate — markdown with YAML frontmatter, linked into a graph, versioned in git — is shared with Google Cloud's [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf), which is deliberately unopinionated. KDE operates the layer it leaves out: lifecycle, current truth, precedence, and governance of agent-authored knowledge.
+The raw material — markdown files with a short header, linked to each other, versioned in git — is the same one Google Cloud's [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf) (OKF) uses, but the two solve different halves of the problem. OKF is a shared way to write knowledge down so any tool can read it, and it is deliberately forgiving: a reader takes whatever it finds. KDE is about knowledge you can rely on while you work:
+
+- **Trustworthy.** Nothing an agent writes counts until a person approves it, and a pull request fails when the code and the knowledge stop agreeing.
+- **Checkable after the fact.** Decisions are replaced, never rewritten, so you can see who approved what, when, and what it replaced; a spec's tests can be rerun at any time to show it still holds.
+- **Quick to find.** An agent starting a task does not search the whole repository: it goes to the area it is changing and reads the decisions that apply today, then the code — in the field, a domain's rules read in about 8,000 tokens instead of the 130,000 it took to work them out from the code.
+
+OKF does a few things KDE does not, such as setting a date when a document should be checked again and recording more than one reviewer. The [handbook](HANDBOOK.md#relation-to-okf) has the detailed comparison.
 
 ## This Repository
 
