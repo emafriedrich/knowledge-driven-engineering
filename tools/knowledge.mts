@@ -29,7 +29,7 @@ type TypeSpec = { template: string; folder: string; prefix: string; active: stri
 
 // Artifact types the commands know how to create and promote. `active` is the
 // status promotion sets; null means the type is not promoted (tasks close,
-// visions and prompts are edited in place).
+// visions are edited in place).
 const TYPES: Record<string, TypeSpec> = {
   decision: { template: 'decision-record.md', folder: 'decisions', prefix: 'DR', active: 'accepted' },
   rfc: { template: 'rfc.md', folder: 'rfcs', prefix: 'RFC', active: 'accepted' },
@@ -41,6 +41,7 @@ const TYPES: Record<string, TypeSpec> = {
   contract: { template: 'contract.md', folder: 'contracts', prefix: 'CONTRACT', active: 'current' },
   task: { template: 'task.md', folder: 'tasks', prefix: 'TASK', active: null },
   playbook: { template: 'playbook.md', folder: 'playbooks', prefix: 'PLAYBOOK', active: 'current' },
+  prompt: { template: 'prompt.md', folder: 'prompts', prefix: 'PROMPT', active: 'current' },
 };
 
 const ID_PATTERN = /^[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-\d+$/;
