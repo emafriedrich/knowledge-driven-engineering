@@ -311,6 +311,21 @@ test('backfill: a complete session says so, and approved rules without a spec ar
   });
 });
 
+test('prompt: new scaffolds from the template and promote sets current — prompts are lifecycle citizens (DR-013)', () => {
+  withFixture({}, (root) => {
+    commandNew(root, 'prompt', 'test', 'Backfill session protocol', { by: 'agent' });
+    const file = only(join(root, 'knowledge/test/prompts'), 'PROMPT-001-');
+    assert.equal(front(file).status, 'draft');
+    assert.equal(front(file).drafted_by, 'agent');
+    const result = commandPromote(root, 'PROMPT-001', { by: 'ema' });
+    assert.equal(front(file).status, 'current');
+    assert.equal(front(file).approved_by, '[ema]');
+    assert.equal(front(file).authors, '[ema]');
+    assert.ok(result.changed.some((name) => name.includes('PROMPT-001')));
+    assert.deepEqual(checkKnowledge(root).errors, []);
+  });
+});
+
 test('cli: usage errors are CommandErrors, and flags with several values are collected', () => {
   withFixture({}, (root) => {
     assert.throws(() => run(root, ['promote']), /usage:/);
