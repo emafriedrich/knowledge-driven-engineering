@@ -124,9 +124,13 @@ function slugify(text: string): string {
 // --- Repository lookups -----------------------------------------------------
 
 function findDomain(root: string, name: string): { catalog: Catalog; domain: CatalogDomain } {
-  for (const catalog of loadCatalogs(root)) {
+  const catalogs = loadCatalogs(root);
+  for (const catalog of catalogs) {
     const domain = catalog.domains.get(name);
     if (domain) return { catalog, domain };
+  }
+  if (catalogs.every((catalog) => catalog.domains.size === 0)) {
+    throw new CommandError(`domain ${name} is not in any catalog, and the catalog in ${root} has no domains at all — if this repository runs KDE from another directory, run the command there; otherwise create it: npm run knowledge -- domain add ${name} --description "<one line>"`);
   }
   throw new CommandError(`domain ${name} is not in any catalog — create it: npm run knowledge -- domain add ${name} --description "<one line>"`);
 }

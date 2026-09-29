@@ -39,6 +39,23 @@ say()  { printf '%s\n' "$*"; }
 add()  { say "  add   $1"; }
 skip() { say "  skip  $1 (already exists)"; }
 
+# A repository runs one knowledge catalog. Installing below a directory of the
+# same git repository that already has one creates a second, empty KDE that
+# nothing reads — refuse and name the right directory instead.
+TOPLEVEL="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [ -n "$TOPLEVEL" ]; then
+  HERE="$(pwd -P)"
+  TOPLEVEL="$(cd "$TOPLEVEL" && pwd -P)"
+  dir="$HERE"
+  while [ "$dir" != "$TOPLEVEL" ] && [ "$dir" != "/" ]; do
+    dir="$(dirname "$dir")"
+    if [ -f "$dir/knowledge/index.yaml" ] && [ -f "$dir/tools/knowledge-check.mts" ]; then
+      say "install.sh: ${dir} already runs Knowledge-Driven Engineering; run the installer from there, not from ${HERE}." >&2
+      exit 1
+    fi
+  done
+fi
+
 # Version of the framework-owned files a repository runs, read from the
 # kde-version marker the installer stamps on line 1 of every copy.
 installed_version() {
@@ -403,7 +420,10 @@ fi
 say ""
 say "Done. Next steps:"
 say "  1. npm run knowledge:check"
-say "  2. Seed current truth with one decision your team already made:"
+say "  2. Existing codebase? Recover the behavior that lives only in code, one domain at a time:"
+say "       npm run knowledge -- backfill ${DOMAIN:-<domain>}"
+say "     then ask your coding agent to \"backfill the ${DOMAIN:-<domain>} domain\" — it follows tools/backfill-protocol.md."
+say "     Starting fresh? Seed current truth with one decision your team already made:"
 say "       npm run knowledge -- new decision ${DOMAIN:-<domain>} \"<title>\" --author <you>"
 say "       npm run knowledge -- promote <ID> --by <you>"
 say "  3. Enable branch protection with code-owner review so knowledge promotion needs a human."
