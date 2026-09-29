@@ -598,7 +598,7 @@ export function commandDomainAdd(
 }
 
 // --- backfill -------------------------------------------------------------------
-// Brownfield onboarding (KDE-RFC-013): starts or resumes a backfill session for
+// Brownfield onboarding (KDE-RFC-013, DR-018): starts or resumes a backfill session for
 // a domain whose behavior already exists in code. The command scaffolds and
 // reports session state; the audit is the agent's job, approval happens with
 // each rule in front of the human, and every promotion stays a human's (DR-007).
@@ -627,7 +627,7 @@ function baselineBody(id: string, domainName: string): string {
 ## Context
 
 KDE was adopted after this domain's code was already in production, so its
-rules existed only in implementation. A backfill session (KDE-RFC-013) is
+rules existed only in implementation. A backfill session is
 recovering them: an agent audits the code and presents each rule with its
 evidence, and a human approves or rejects it on sight.
 
@@ -648,6 +648,19 @@ a why matters, it gets its own Decision Record.
 
 <!-- If this replaces another decision, link it here and update the old record. -->
 `;
+}
+
+// The command never audits: it says, every time, that the next move is the
+// agent's, and where the agent finds the protocol.
+function backfillHandoff(root: string, domainName: string, verb: string): string[] {
+  const lines = [
+    'nothing is audited by this command — the audit is your coding agent\'s job:',
+    `  ask it to "${verb} the ${domainName} domain"; it follows tools/backfill-protocol.md, which the KDE section of AGENTS.md points to`,
+  ];
+  if (!existsSync(join(root, 'tools', 'backfill-protocol.md'))) {
+    lines.push('tools/backfill-protocol.md is missing — refresh the framework files with install.sh --upgrade');
+  }
+  return lines;
 }
 
 export function commandBackfill(root: string, domainName: string): CommandResult {
@@ -671,7 +684,7 @@ export function commandBackfill(root: string, domainName: string): CommandResult
       baseline = { id, status: 'draft' };
     }
     writeFileSync(sessionFile, [
-      `# Backfill session state for ${domainName} (KDE-RFC-013).`,
+      `# Backfill session state for ${domainName}; the protocol is tools/backfill-protocol.md.`,
       '# The agent records each rule it presents; the disposition is recorded as the',
       '# human gives it. Approved rules live on as specs — this file is session',
       '# history, never current truth. Archive or delete it once the domain is mined.',
@@ -681,12 +694,8 @@ export function commandBackfill(root: string, domainName: string): CommandResult
     ].join('\n'));
     changed.push(relative(root, sessionFile));
     notes.push(
-      'backfill session started — protocol:',
-      '  1. audit the domain code; record each recovered rule in backfill.yaml as pending',
-      '  2. present rules one at a time with evidence (paths, symbols, tests — never file:line)',
-      '  3. approved behavior goes to one spec per feature, depends_on the baseline decision',
-      '  4. architectural stances get their own Decision Record instead of a spec',
-      `  5. promotion stays human (DR-007): npm run knowledge -- promote ${baseline.id} --by <you> with the first approval`,
+      `backfill session opened for ${domainName}: baseline ${baseline.id} (${baseline.status}), state in ${relative(root, sessionFile)}`,
+      ...backfillHandoff(root, domainName, 'backfill'),
     );
   } else {
     const parsed = (parseYaml(readFileSync(sessionFile, 'utf8')) ?? {}) as { rules?: unknown };
@@ -717,9 +726,9 @@ export function commandBackfill(root: string, domainName: string): CommandResult
     } else {
       notes.push('no baseline decision carries the backfill tag — backfilled specs have nothing to anchor to');
     }
-    if (parsed.rules.length > 0 && counts.pending === 0) {
-      notes.push('no pending rules — the session is complete; archive or delete backfill.yaml once the domain is mined');
-    }
+    if (parsed.rules.length === 0) notes.push(...backfillHandoff(root, domainName, 'backfill'));
+    else if (counts.pending > 0) notes.push(...backfillHandoff(root, domainName, 'continue the backfill of'));
+    else notes.push('no pending rules — the session is complete; archive or delete backfill.yaml once the domain is mined');
   }
 
   return { changed: [...changed, ...writeManifests(root)], notes };
@@ -900,7 +909,7 @@ const USAGE = `usage:
   knowledge promote <ID> --by <human> [--topic <name>] [--to implemented]
   knowledge supersede <OLD-ID> --by <NEW-ID> [--approved-by <human>]   (promotes a draft NEW-ID)
   knowledge domain add <name> --description "<text>" [--code-paths a/ b/] [--catalog knowledge/index.yaml]
-  knowledge backfill <domain>   (starts or resumes a brownfield backfill session, KDE-RFC-013)
+  knowledge backfill <domain>   (opens or resumes a backfill session; the audit itself is an agent's, see tools/backfill-protocol.md)
   knowledge renumber <OLD-ID> <NEW-ID>
   knowledge done <TASK-ID> [--by <name>]
   knowledge accept <SPEC-ID> | --promoted <base-ref>
