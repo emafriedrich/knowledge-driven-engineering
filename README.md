@@ -84,6 +84,24 @@ You don't need to know what an RFC is to use this. There are three kinds of docu
 
 In practice this means the agent asks more than you're used to, and every question is one it would otherwise have answered silently in code.
 
+### The other types, for when you need them
+
+Decisions, RFCs and specs carry almost all the weight. The rest are optional; reach for one when prose in a spec stops being enough.
+
+| Type | Answers | Reach for it when |
+|---|---|---|
+| **Product vision** | What are we building, and why? | The domain needs a durable direction that specs can point to. One per domain, edited in place. |
+| **User flow** | How does a person move through a capability? | The path has steps and recovery branches worth drawing (Mermaid). |
+| **Information architecture** | What information exists, and where does it live? | Screens, sections and hierarchy need to be agreed before building them. |
+| **Design system** | What reusable visual rules exist? | Component states and interaction rules apply across features. |
+| **Model** | What states, entities and transitions exist? | Several documents depend on the same state machine or entity model. |
+| **Contract** | What interface does the code expose? | Clients depend on an API or event. Code under the contract's `implements` paths cannot change without the contract, or the drift gate fails. |
+| **Task** | What bounded work remains? | You want work tracked next to the knowledge that justifies it. With Jira or Linear, the tracker owns the task; the file only links it. |
+| **Playbook** | How does an agent do a recurring job? | A procedure repeats and should not be reinvented each time, like drafting knowledge from tickets. |
+| **Prompt** | What context should an agent receive? | You want the agent's starting context versioned and reviewed like any other rule. |
+
+For scale: the first production adoption holds 65 decisions, 12 specs and 8 RFCs, plus one vision, model, contract and design-system document each. No tasks, playbooks or prompts. [Every type in full](HANDBOOK.md#artifacts).
+
 ## Quick start
 
 Requires Node 22.6+ (only for the tools; your project can be any stack).
