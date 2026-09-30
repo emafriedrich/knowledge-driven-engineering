@@ -14,7 +14,7 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 | product_vision | KDE-PV-001 | Knowledge-Driven Engineering product vision | 2026-08-30 |
 | lifecycle_flow | KDE-FLOW-001 | Knowledge evolution lifecycle | 2026-08-30 |
 | artifact_spec | KDE-SPEC-001 | Knowledge artifact and metadata rules | 2026-09-21 |
-| agent_context | KDE-PROMPT-001 | Coding agent context template | 2026-09-03 |
+| agent_context | KDE-PROMPT-001 | Coding agent context template | 2026-09-30 |
 | signals_playbook | KDE-PLAYBOOK-001 | Drafting knowledge from external signals | 2026-09-09 |
 
 ## Active decisions
@@ -41,7 +41,9 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 
 ## Pending — NOT current truth, do not obey
 
+- `DR-019` (draft, agent-drafted): Agents draft a decision when the request is clear, an RFC when it is ambiguous, and a spec when behavior has many rules
 - `KDE-RFC-010` (draft, agent-drafted): Distribute framework tooling as an npm package
+- `KDE-RFC-014` (draft, agent-drafted): Agents choose the artifact and never assume an answer
 
 ## Rules
 

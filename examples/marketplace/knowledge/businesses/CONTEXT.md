@@ -7,7 +7,10 @@ Merchant entity - profile, schedules, location, publication and settings.
 
 ## Current truth
 
-None yet.
+| Role | ID | Title | Updated |
+| --- | --- | --- | --- |
+| deactivation_and_publishing_backend | MP-SPEC-004 | Business deactivation and marketplace publishing (backend) | 2026-09-25 |
+| deactivation_and_publishing_admin_ui | MP-SPEC-007 | Admin UI for business deactivation and marketplace publishing (frontend) | 2026-09-25 |
 
 ## Active decisions
 

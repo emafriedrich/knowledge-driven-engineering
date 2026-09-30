@@ -4,3 +4,6 @@ domains:
     path: examples/marketplace/knowledge/businesses
     description: Merchant entity - profile, schedules, location, publication and settings.
     decision_index: examples/marketplace/knowledge/businesses/decisions/index.yaml
+    current:
+      deactivation_and_publishing_backend: MP-SPEC-004
+      deactivation_and_publishing_admin_ui: MP-SPEC-007

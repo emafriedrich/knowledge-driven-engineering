@@ -140,6 +140,13 @@ test('the installed kde section carries every hard rule of the framework AGENTS.
     // The tools enforce these rules in adopting repositories too; a rule missing here is lost on --upgrade.
     for (const rule of rules) assert.ok(installed.includes(rule), `install.sh kde section is missing the hard rule: ${rule}`);
     assert.match(installed, /Read the domain `CONTEXT\.md` when present/);
+    // The artifact-choice rule (DR-019) is read every session too: the installed section carries it verbatim.
+    const choosing = own.split('### Choosing the artifact')[1].split('\n## ')[0].split('\n').filter((line) => line.startsWith('- '));
+    assert.equal(choosing.length, 3);
+    const section = installed.split('<!-- kde:begin -->')[1].split('<!-- kde:end -->')[0];
+    assert.match(section, /#### Choosing the artifact/);
+    for (const rule of choosing) assert.ok(section.includes(rule), `install.sh kde section is missing the artifact-choice rule: ${rule}`);
+    assert.ok(section.includes('draft an RFC listing the open questions and stop. Do not choose an answer on the human\'s behalf, and do not implement against an assumption.'));
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -172,5 +179,18 @@ test('the kde section of AGENTS.md is framework-owned: reported when stale, repl
     assert.match(readFileSync(agents, 'utf8'), /Keep me\./);
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('the installer downloads the release that matches its own version unless KDE_VERSION says otherwise', () => {
+  const script = readFileSync(join(repo, 'install.sh'), 'utf8');
+  const version = JSON.parse(readFileSync(join(repo, 'package.json'), 'utf8')).version as string;
+  // The curl one-liner in the docs names the tag; a release bumps both together.
+  assert.match(script, new RegExp(`^DEFAULT_REF="v${version.replace(/\./g, '\\.')}"$`, 'm'));
+  assert.match(script, /^REF="\$\{KDE_VERSION:-\$\{KDE_REF:-\$DEFAULT_REF\}\}"$/m);
+  for (const doc of ['README.md', 'ADOPTING.md']) {
+    const text = readFileSync(join(repo, doc), 'utf8');
+    assert.doesNotMatch(text, /knowledge-driven-engineering\/main\/install\.sh/, `${doc} still installs from main`);
+    assert.match(text, new RegExp(`knowledge-driven-engineering/v${version.replace(/\./g, '\\.')}/install\\.sh`), `${doc} does not install from v${version}`);
   }
 });
