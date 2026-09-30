@@ -253,6 +253,8 @@ When a decision changes:
 
 When a spec changes, review implementation and tests. Create a Decision Record only if the change records an important product, UX, design, architecture, security, infrastructure, or business decision.
 
+When code changes without its knowledge, the drift gate fails the pull request. The problem it exists for, its rules, and its blind spots are in [DRIFT.md](DRIFT.md).
+
 ## Agent Consumption
 
 Agents should retrieve the minimum canonical knowledge needed for the task:
