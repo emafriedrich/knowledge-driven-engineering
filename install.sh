@@ -2,7 +2,7 @@
 # Installs Knowledge-Driven Engineering scaffolding into the current repository.
 #
 # Usage, from the root of your repository:
-#   curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/v0.8.0/install.sh | bash -s -- <first-domain>
+#   curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/v0.8.1/install.sh | bash -s -- <first-domain>
 #
 # From a local clone (offline / development):
 #   KDE_SOURCE=/path/to/knowledge-driven-engineering bash install.sh <first-domain>
@@ -37,7 +37,7 @@ done
 REPO_URL="https://github.com/emafriedrich/knowledge-driven-engineering"
 # Release this copy of the installer belongs to; bumped with package.json on
 # every release so a curl of the script installs the matching tools.
-DEFAULT_REF="v0.8.0"
+DEFAULT_REF="v0.8.1"
 REF="${KDE_VERSION:-${KDE_REF:-$DEFAULT_REF}}"
 
 say()  { printf '%s\n' "$*"; }

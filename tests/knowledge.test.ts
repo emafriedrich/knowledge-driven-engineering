@@ -152,6 +152,87 @@ test('promote: an accepted Decision Record missing from the index is indexed, ho
   });
 });
 
+// A spec needs a promoted decision to depend on before `promote` accepts it.
+function anchoredSpec(root: string, title: string): string {
+  if (!existsSync(join(root, 'knowledge/test/decisions'))) {
+    commandNew(root, 'decision', 'test', 'Anchor');
+    commandPromote(root, 'DR-001', { by: 'ema' });
+  }
+  commandNew(root, 'spec', 'test', title, { author: 'ema' });
+  const dir = join(root, 'knowledge/test/specs');
+  const file = join(dir, readdirSync(dir).filter((name) => name.includes(title.toLowerCase().replace(/ /g, '-')))[0]);
+  writeFileSync(file, readFileSync(file, 'utf8').replace('depends_on: []', 'depends_on: [DR-001]'));
+  return file;
+}
+
+test('promote --topic on a spec declares it under current: in the catalog, keeping comments, and the manifest lists it (DR-020)', () => {
+  withFixture({ 'knowledge/index.yaml': `# Catalog, keep me.\n${CATALOG}    current: {}\n` }, (root) => {
+    const spec = anchoredSpec(root, 'Checkout behavior');
+    const result = commandPromote(root, 'SPEC-001', { by: 'ema', topic: 'checkout' });
+    assert.equal(front(spec).status, 'current');
+    const catalog = readFileSync(join(root, 'knowledge/index.yaml'), 'utf8');
+    assert.match(catalog, /^# Catalog, keep me\./);
+    assert.deepEqual((parseYaml(catalog) as { domains: { test: { current: unknown } } }).domains.test.current, { checkout: 'SPEC-001' });
+    assert.match(result.notes.join('\n'), /catalog anchor: test\.current\.checkout/);
+    assert.ok(result.changed.includes('knowledge/index.yaml'));
+    assert.match(readFileSync(join(root, 'knowledge/test/CONTEXT.md'), 'utf8'), /checkout[^\n]*SPEC-001/);
+    const checked = checkKnowledge(root);
+    assert.deepEqual(checked.errors, []);
+    assert.deepEqual(checked.warnings.filter((warning) => /declares under current/.test(warning)), []);
+  });
+});
+
+test('promote without --topic still promotes a spec but says it is not declared; re-running with --topic anchors it without touching the spec', () => {
+  withFixture({}, (root) => {
+    const spec = anchoredSpec(root, 'Checkout behavior');
+    const plain = commandPromote(root, 'SPEC-001', { by: 'ema' });
+    assert.match(plain.notes.join('\n'), /not declared in the test catalog entry[\s\S]*--topic <name>/);
+    assert.match(checkKnowledge(root).warnings.join('\n'), /\(SPEC-001\) is a current spec that no domain declares under current:/);
+    const before = readFileSync(spec, 'utf8');
+
+    const anchored = commandPromote(root, 'SPEC-001', { by: 'someone-else', topic: 'checkout' });
+    assert.match(anchored.notes.join('\n'), /already current; only the catalog anchor was added/);
+    assert.equal(readFileSync(spec, 'utf8'), before, 'the spec is untouched');
+    assert.match(readFileSync(join(root, 'knowledge/index.yaml'), 'utf8'), /current:\n {6}checkout: SPEC-001\n/);
+    assert.deepEqual(checkKnowledge(root).warnings.filter((warning) => /declares under current/.test(warning)), []);
+
+    const again = commandPromote(root, 'SPEC-001', { by: 'ema', topic: 'checkout' });
+    assert.deepEqual(again.changed, []);
+    assert.match(again.notes.join('\n'), /already current and anchored as checkout/);
+  });
+});
+
+test('promote --topic refuses a role held by another document, a bad name, and types with no current status, and writes nothing', () => {
+  withFixture({}, (root) => {
+    anchoredSpec(root, 'Checkout behavior');
+    const second = anchoredSpec(root, 'Refund behavior');
+    commandPromote(root, 'SPEC-001', { by: 'ema', topic: 'orders' });
+    const catalog = readFileSync(join(root, 'knowledge/index.yaml'), 'utf8');
+
+    assert.throws(() => commandPromote(root, 'SPEC-002', { by: 'ema', topic: 'orders' }), /test already anchors orders to SPEC-001 — pick another --topic/);
+    assert.equal(front(second).status, 'draft', 'the spec is left as it was');
+    assert.equal(readFileSync(join(root, 'knowledge/index.yaml'), 'utf8'), catalog, 'the catalog is left as it was');
+    assert.throws(() => commandPromote(root, 'SPEC-002', { by: 'ema', topic: 'two words' }), /--topic two words must be letters, digits, dashes and underscores/);
+
+    commandNew(root, 'rfc', 'test', 'Some question', { by: 'agent' });
+    assert.throws(() => commandPromote(root, 'RFC-001', { by: 'ema', topic: 'x' }), /--topic names a decision topic or the catalog anchor of a current document; rfc documents have neither/);
+  });
+});
+
+test('promote --topic on an implemented spec anchors it and keeps it implemented', () => {
+  withFixture({}, (root) => {
+    const spec = anchoredSpec(root, 'Checkout behavior');
+    writeFileSync(spec, readFileSync(spec, 'utf8').replace(/```acceptance[\s\S]*?```/, '```acceptance\ntest -f knowledge/index.yaml\n```'));
+    commandPromote(root, 'SPEC-001', { by: 'ema', to: 'implemented' });
+    assert.equal(front(spec).status, 'implemented');
+
+    commandPromote(root, 'SPEC-001', { by: 'ema', topic: 'checkout' });
+    assert.equal(front(spec).status, 'implemented');
+    assert.match(readFileSync(join(root, 'knowledge/index.yaml'), 'utf8'), /checkout: SPEC-001/);
+    assert.deepEqual(checkKnowledge(root).errors, []);
+  });
+});
+
 test('promote and supersede edit a decision index written in multi-line flow style, keeping its comments', () => {
   withFixture({}, (root) => {
     const indexFile = join(root, 'knowledge/test/decisions/index.yaml');

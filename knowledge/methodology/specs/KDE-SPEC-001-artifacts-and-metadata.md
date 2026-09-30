@@ -3,7 +3,7 @@ id: KDE-SPEC-001
 title: Knowledge artifact and metadata rules
 status: current
 created: 2026-08-30
-updated: 2026-09-21
+updated: 2026-09-30
 authors: [engineering]
 scope: [methodology]
 tags: [spec, metadata, artifacts]
@@ -77,6 +77,8 @@ Gates on status (DR-007, DR-010): an agent-drafted document cannot hold `accepte
 ## Domain Catalog Fields
 
 A domain entry in `knowledge/index.yaml` may declare `code_paths`: plain repository path prefixes of the implementation the domain governs (DR-008). Consumers use prefix matching; V1 has no glob support. `code_paths` feed the `knowledge:context` command and the CI drift gate.
+
+A domain entry may declare `current`: a map from a short name (the role the document plays, such as `availability`) to the id of the `current` document that stands for it (DR-009). `promote <ID> --by <human> --topic <name>` writes that entry when it promotes a spec, flow, model, contract or other current-status document, refuses a name held by a different document, and can be re-run on a document that is already current to declare it (DR-020). The validator warns when a `current` or `implemented` spec is not declared in any domain's `current`, because its domain's `CONTEXT.md` would not list it.
 
 A domain entry may declare `trackers`: a map from tracker system to the key that holds the domain's tasks (`trackers: { jira: PD }`), so an agent can resolve "the tracker for `orders`" from the catalog instead of from a prompt (DR-014).
 

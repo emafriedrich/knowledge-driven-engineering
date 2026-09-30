@@ -135,11 +135,11 @@ function findDomain(root: string, name: string): { catalog: Catalog; domain: Cat
   throw new CommandError(`domain ${name} is not in any catalog — create it: npm run knowledge -- domain add ${name} --description "<one line>"`);
 }
 
-function domainOfFile(root: string, file: string): { name: string; domain: CatalogDomain } | null {
+function domainOfFile(root: string, file: string): { name: string; domain: CatalogDomain; catalogFile: string } | null {
   const rel = relative(root, file).replace(/\\/g, '/');
   for (const catalog of loadCatalogs(root)) {
     for (const [name, domain] of catalog.domains) {
-      if (domain.path && rel.startsWith(domain.path.replace(/\/$/, '') + '/')) return { name, domain };
+      if (domain.path && rel.startsWith(domain.path.replace(/\/$/, '') + '/')) return { name, domain, catalogFile: catalog.file };
     }
   }
   return null;
@@ -313,6 +313,11 @@ export function commandPromote(root: string, id: string, options: { by?: string;
   if (!type || !spec || !spec.active) {
     throw new CommandError(`${id} is a ${type ?? 'untyped'} document; promote handles ${Object.entries(TYPES).filter(([, entry]) => entry.active).map(([name]) => name).join(', ')}`);
   }
+  // --topic names the decision-index topic of a Decision Record, or the catalog anchor of a document that becomes current (DR-020).
+  const anchorable = spec.active === 'current';
+  if (options.topic !== undefined && type !== 'decision' && !anchorable) {
+    throw new CommandError(`--topic names a decision topic or the catalog anchor of a current document; ${type} documents have neither`);
+  }
   if (options.to !== undefined && options.to !== 'implemented') throw new CommandError(`--to accepts only implemented (the active status is the default)`);
   const target = options.to ?? spec.active;
   if (options.to === 'implemented' && type !== 'spec') {
@@ -320,8 +325,10 @@ export function commandPromote(root: string, id: string, options: { by?: string;
   }
   const status = String(document.data.status);
   // An accepted Decision Record missing from its index still gets indexed below; nothing else is left to do.
-  const already = status === target;
-  if (already && type !== 'decision') return { changed: [], notes: [`${id} is already ${status}`] };
+  const anchoring = anchorable && options.topic !== undefined;
+  // Anchoring an implemented spec must not walk its status back to current.
+  const already = status === target || (anchoring && type === 'spec' && status === 'implemented');
+  if (already && type !== 'decision' && !anchoring) return { changed: [], notes: [`${id} is already ${status}`] };
   const acceptance: string[] = [];
   if (options.to === 'implemented') {
     // `implemented` earns its meaning (DR-015): the spec's acceptance block must pass here and now.
@@ -357,6 +364,26 @@ export function commandPromote(root: string, id: string, options: { by?: string;
     }
   }
 
+  let anchor: { catalogFile: string; domainName: string; role: string } | null = null;
+  let unanchoredNote: string | null = null;
+  if (anchorable) {
+    const owner = domainOfFile(root, document.file);
+    if (anchoring) {
+      const role = options.topic!;
+      if (!owner) throw new CommandError(`${relative(root, document.file)} is not inside a cataloged domain path`);
+      if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(role)) throw new CommandError(`--topic ${role} must be letters, digits, dashes and underscores (one or two words, like availability)`);
+      const holder = owner.domain.current[role];
+      if (holder !== undefined && holder !== id) {
+        throw new CommandError(`${owner.name} already anchors ${role} to ${holder} — pick another --topic, or replace that anchor by hand (supersession between documents other than Decision Records is not automated, DR-020)`);
+      }
+      if (already && holder === id) return { changed: [], notes: [`${id} is already ${status} and anchored as ${role}`] };
+      anchor = { catalogFile: owner.catalogFile, domainName: owner.name, role };
+      touched.push(owner.catalogFile);
+    } else if (owner && !Object.values(owner.domain.current).includes(id)) {
+      unanchoredNote = `${id} is not declared in the ${owner.name} catalog entry, so CONTEXT.md will not list it as current truth; to declare it: npm run knowledge -- promote ${id} --by ${options.by} --topic <name>`;
+    }
+  }
+
   const before = checkKnowledge(root).errors;
   const saved = snapshot(touched);
 
@@ -380,6 +407,12 @@ export function commandPromote(root: string, id: string, options: { by?: string;
     }
   }
 
+  if (anchor) {
+    if (upsertCatalogAnchor(anchor.catalogFile, anchor.domainName, anchor.role, id) === 'exists') {
+      notes.push(`catalog already anchors ${anchor.role} to ${id}`);
+    }
+  }
+
   const blocking = blockingErrors(root, before, checkKnowledge(root).errors, touched);
   if (blocking.length > 0) {
     restore(saved);
@@ -387,8 +420,11 @@ export function commandPromote(root: string, id: string, options: { by?: string;
   }
 
   const changed = [...touched.map((file) => relative(root, file)), ...writeManifests(root)];
-  if (already) notes.push(`${id} was already ${status} and missing from the decision index`);
+  if (already && type === 'decision') notes.push(`${id} was already ${status} and missing from the decision index`);
+  if (already && anchor) notes.push(`${id} was already ${status}; only the catalog anchor was added`);
   if (topic) notes.push(`decision index topic: ${topic}`);
+  if (anchor) notes.push(`catalog anchor: ${anchor.domainName}.current.${anchor.role}`);
+  if (unanchoredNote) notes.push(unanchoredNote);
   if (acceptance.length > 0) notes.push(`acceptance checks passed:`, ...acceptance);
   return { changed, notes };
 }
@@ -435,6 +471,27 @@ function upsertIndexTopic(indexFile: string, topic: string, id: string): 'added'
     throw new CommandError(`${indexFile}: current must be a mapping of topic to Decision Record id`);
   }
   writeIndex(indexFile, doc);
+  return 'added';
+}
+
+// A document that becomes current is declared under `current:` of its domain entry in the
+// catalog (DR-020). Same yaml document API as the decision index: comments and style survive.
+function upsertCatalogAnchor(catalogFile: string, domainName: string, role: string, id: string): 'added' | 'exists' {
+  const doc = parseDocument(readFileSync(catalogFile, 'utf8'));
+  if (doc.errors.length > 0) throw new CommandError(`${catalogFile} is not valid YAML: ${doc.errors[0].message}`);
+  const entry = doc.getIn(['domains', domainName]);
+  if (!isMap(entry)) throw new CommandError(`${catalogFile}: domain ${domainName} must be a mapping`);
+  const current = entry.get('current');
+  if (isMap(current)) {
+    if (current.get(role) === id) return 'exists';
+    current.set(role, id);
+    current.flow = false;
+  } else if (current === undefined || current === null) {
+    entry.set('current', doc.createNode({ [role]: id }));
+  } else {
+    throw new CommandError(`${catalogFile}: current of domain ${domainName} must be a mapping of role to document id`);
+  }
+  writeFileSync(catalogFile, doc.toString({ lineWidth: 0 }));
   return 'added';
 }
 
