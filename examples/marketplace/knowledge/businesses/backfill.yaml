@@ -1,0 +1,6 @@
+# Backfill session state for businesses; the protocol is tools/backfill-protocol.md.
+# The agent records each rule it presents; the disposition is recorded as the
+# human gives it. Approved rules live on as specs — this file is session
+# history, never current truth. Archive or delete it once the domain is mined.
+# Each rule: { rule, evidence, disposition: pending|approved|rejected, spec?, note? }
+rules: []

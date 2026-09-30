@@ -1,0 +1,6 @@
+# Example domain catalog: one domain excerpted from a production adoption.
+domains:
+  businesses:
+    path: examples/marketplace/knowledge/businesses
+    description: Merchant entity - profile, schedules, location, publication and settings.
+    decision_index: examples/marketplace/knowledge/businesses/decisions/index.yaml
