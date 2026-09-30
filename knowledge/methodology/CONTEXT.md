@@ -45,6 +45,9 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 - `DR-020` (draft, agent-drafted): promote --topic names the catalog anchor of a current document; the validator warns on an unanchored current spec
 - `KDE-RFC-010` (draft, agent-drafted): Distribute framework tooling as an npm package
 - `KDE-RFC-015` (draft, agent-drafted): Re-anchor agents in-session: the hook returns the domain manifest on code edits
+- `KDE-RFC-016` (draft, agent-drafted): External signals leave a mechanical trace: a draft must cite the ticket the work came from
+- `KDE-RFC-017` (draft, agent-drafted): Is the task artifact worth keeping when field use never wrote one
+- `KDE-RFC-018` (draft, agent-drafted): Decisions that span repositories: where a cross-service rule lives
 
 ## Rules
 
