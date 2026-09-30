@@ -38,12 +38,11 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 | artifact-lifecycle | DR-016 | Implemented belongs to specs and a spec is warranted by a testable contract | 2026-09-21 |
 | agent-rules-ownership | DR-017 | The agent rules section is framework-owned and stale templates are reported | 2026-09-21 |
 | backfill | DR-018 | Backfill recovers observed behavior into feature specs anchored to a baseline decision | 2026-09-29 |
+| artifact-choice | DR-019 | Agents draft a decision when the request is clear, an RFC when it is ambiguous, and a spec when behavior has many rules | 2026-09-30 |
 
 ## Pending — NOT current truth, do not obey
 
-- `DR-019` (draft, agent-drafted): Agents draft a decision when the request is clear, an RFC when it is ambiguous, and a spec when behavior has many rules
 - `KDE-RFC-010` (draft, agent-drafted): Distribute framework tooling as an npm package
-- `KDE-RFC-014` (draft, agent-drafted): Agents choose the artifact and never assume an answer
 - `KDE-RFC-015` (draft, agent-drafted): Re-anchor agents in-session: the hook returns the domain manifest on code edits
 
 ## Rules

@@ -18,3 +18,4 @@ current:
   artifact-lifecycle: DR-016
   agent-rules-ownership: DR-017
   backfill: DR-018
+  artifact-choice: DR-019
