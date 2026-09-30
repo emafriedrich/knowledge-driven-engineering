@@ -41,7 +41,7 @@ The first production adoption was a multi-tenant marketplace, four months into d
 - **Diffing knowledge against code caught a wrong decision.** An *accepted* Decision Record turned out to describe behavior the code did not have. Because the decision was a canonical, indexed record, the contradiction was detectable, and it was fixed through the normal draft-and-promote flow instead of surfacing as a production bug.
 - **One backfilled domain paid for itself.** Auditing a single domain — login, sessions, user management, about fifty files — recovered 22 behavior rules into three feature specs, each rule with its evidence and, where one exists, the test that proves it. The same pass reported two accepted decisions that were never implemented, one decision the code had outgrown, and three defects, two of them security issues. Nobody had asked about any of them.
 
-That marketplace is a private product, so its code and knowledge cannot be published, and the evidence above is described rather than linked. We are working on publishing evidence that can be checked without breaking any contract, and expect to share it in the short term.
+That marketplace's code is private, but you can read the knowledge of one of its domains as it stood in production: [examples/marketplace](examples/marketplace/README.md) holds its merchant domain, with ten accepted decisions, two specs, two RFCs, and the baseline of its backfill.
 
 ## Quick Start
 
@@ -160,6 +160,7 @@ It is two things: the definition of the method and a working instance of it. The
 - [ADOPTING.md](ADOPTING.md) — installing, upgrading, backfilling, minimal adoption
 - [HANDBOOK.md](HANDBOOK.md) — the method in full
 - [AGENTS.md](AGENTS.md) — the rules agents follow
+- [examples/marketplace](examples/marketplace/README.md) — one domain excerpted from the first production adoption
 - [examples/food-delivery](examples/food-delivery/README.md) — a small worked example
 - [CONTRIBUTING.md](CONTRIBUTING.md) and [REVIEW.md](REVIEW.md) — changing the method
 
