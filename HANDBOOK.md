@@ -117,6 +117,12 @@ A task may carry `external_ref` (`jira:PD-123`, `linear:ENG-42`, a URL) when the
 
 Statuses: `draft`, `in-review`, `done`. A closed task is `done`, not `implemented` (DR-016).
 
+### Playbook
+
+Answers: How does an agent carry out a recurring job?
+
+Use it for procedures an agent repeats and should not reinvent: numbered steps, what to read first, what to produce, where to stop. A playbook tells an agent how to work; it never states product rules, which stay in decisions and specs. Example: KDE-PLAYBOOK-001, drafting knowledge from tickets and wiki pages.
+
 ### Prompt / Agent Context
 
 Answers: What context should an AI agent receive?
