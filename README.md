@@ -2,169 +2,175 @@
 
 **Your coding agents write good code fast. They don't know your rules.**
 
-Knowledge-Driven Engineering (KDE) is a lightweight system for keeping a project's decisions and behavior rules in the repository — versioned, validated in CI, and retrievable by humans and agents before they change anything. Markdown files, a validator, and a handful of commands. No server, no database, no new place to look.
+Knowledge-Driven Engineering keeps a project's decisions and behavior rules in the repository as markdown — versioned, validated in CI, and read by agents before they touch code. Agents draft; humans promote; a validator and a drift gate keep the knowledge and the code from disagreeing silently.
 
-It works best when a project starts with it: every decision is recorded as it is made, and there is no knowledge to recover from existing code. But no worries: it works well in an existing project too — see [Quick Start](#quick-start).
+No server, no database. Markdown files, one validator, a handful of commands.
 
-To install, run this from the root of your repository, with the name of your first domain:
+> **Status:** early. One production adoption, API may change between commits. Pin a commit if you depend on it.
+> **License:** [MIT](LICENSE)
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/main/install.sh | bash -s -- <your-first-domain>
+## What it looks like
+
+A real decision record, from the `businesses` domain of the first production adoption ([full file](examples/marketplace/knowledge/businesses/decisions/MP-DR-034-orders-are-only-accepted-while-the-business-is-open-by-sched.md)):
+
+```markdown
+---
+id: MP-DR-034
+title: Orders are only accepted while the business is open by schedule and by its manual switch
+status: accepted
+drafted_by: agent
+approved_by: [emafriedrich]
+scope: [businesses]
+depends_on: [MP-DR-033]
+related: [MP-DR-030]
+---
+
+## Context
+Today "open/closed" is only the manual `isOpen` flag; the weekly schedule
+never blocks anything, and checkout doesn't check `isOpen` either. A customer
+can order at 3 a.m. from a place that closed at midnight.
+
+## Decision
+1. Whether the business accepts orders is computed, not stored, as one
+   `availability` value: `open`, `closed_by_schedule` or `closed_by_merchant`.
+   The manual switch can only close the business, never open it outside
+   the schedule.
+2. The API enforces it at checkout: `orders.business_closed`, HTTP 409,
+   with `reason` and `nextOpensAt`. The storefront check is convenience only.
+4. Only creation is blocked. A cart opened at 23:58 and submitted at 00:01
+   is rejected.
+(rules 3, 5, 6 and consequences in the full record)
 ```
 
-## The Problem
+The agent drafted it; a human approved it; the validator refuses any record with `drafted_by: agent` and no approver. Before touching checkout, an agent reads the domain's generated `CONTEXT.md` — the decisions in force, and what is explicitly *not* truth yet:
 
-An agent implementing a change has two sources of truth: your prompt and your code. Everything else — why orders can't be edited after payment, which role may deactivate an admin, what a 2% price tolerance protects — lives in chat threads, tickets, and people's heads. So the agent does the only thing it can:
+```markdown
+## Active decisions
+| Topic | ID | Title | Updated |
+| schedule | MP-DR-033 | Merchants edit their weekly schedule from settings | 2026-09-25 |
+| availability | MP-DR-034 | Orders are only accepted while the business is open ... | 2026-09-25 |
+| visibility | MP-DR-030 | Business visibility states: active, open and published | 2026-09-25 |
+(ten in total)
 
-- **It infers product rules from implementation.** Code shows what the system does, not what it must do. A bug looks exactly like a rule.
-- **It invents what is missing.** Asked for behavior nobody wrote down, it picks something plausible, and plausible is not the same as decided.
-- **It cannot tell current from historical.** An old design doc, a superseded decision, and today's rule look equally authoritative in a repository search.
+## Pending — NOT current truth, do not obey
+- `MP-DR-053` (draft, agent-drafted): Backfill baseline for businesses
+- `MP-RFC-005` (draft, agent-drafted): Multi-branch businesses
+```
 
-Humans have the same problem six months later, including the person who made the decisions. Documentation is the usual answer, and documentation rots: nothing checks it against the code, nothing says which document wins, and nobody knows it is wrong until someone acts on it.
+That domain reads in ~8k tokens. Reconstructing the same rules from its ~50 files of code took an agent ~130k (n=1, one-time extraction — see [in the field](ADOPTING.md#in-the-field)).
 
-## What KDE Does About It
+## Why knowledge drifts
 
-KDE treats knowledge like code: it lives in the repository, it has a lifecycle, and CI checks it.
+Writing the rules down is the easy part. The hard part is that they stop being true: someone changes checkout and nobody touches the decision that governs it, or an agent reads the rules at the start of a session and, a hundred thousand tokens later, implements something else. A human discounts a stale document. An agent obeys it literally, and a rule that no longer holds looks exactly like one that does. That is drift, and discipline does not fix it. What has held up is mechanical: a change to governed code cannot merge without touching the knowledge that governs it, or saying out loud that it does not need to. [More on drift, and what the gate does not catch](DRIFT.md).
 
-- **Current truth is computable.** Decision Records keep history; a small index per domain answers "which decisions apply *today*?" in a form an agent consumes directly.
-- **Sources have an explicit precedence.** When a decision, a spec, and the code disagree, the order is written down — and the rule is to *report* the conflict, never resolve it silently.
-- **Agents get a bounded retrieval path.** Not "read the docs": identify the domain, read its generated `CONTEXT.md`, its active decisions and current spec, and only then the code. It also costs less: a rule that takes one sentence in a spec is spread across several files in code, and an agent without memory re-derives it on every task that needs it. In the field, reconstructing the rules of one entire domain from its code took an agent about 130,000 tokens; all the knowledge that came out of it reads in about 8,000. A single task needs only a few of those rules, and the agent still reads the code it changes, so the saving per task is smaller — but it recurs on every task, and so does the risk of deducing a rule wrong.
-- **Agents propose; humans promote.** An agent drafts anything; nothing it drafts becomes current truth until a human runs the promotion command.
-- **Knowledge integrity runs in CI.** The validator checks the knowledge graph the way a linter checks code; a drift gate fails a pull request that changes a domain's behavior without touching its knowledge; a spec's acceptance block proves it with your own tests.
-- **Existing code is not a dead end.** A backfill session recovers the rules that live only in your code into specs you approve one by one.
+## Three documents, and who writes which
 
-## What It Found In The Field
+You don't need to know what an RFC is to use this. There are three kinds of document that matter, and the agent picks the right one for you.
 
-The first production adoption was a multi-tenant marketplace, four months into development, built largely by coding agents. KDE arrived mid-project. Some of what happened:
+**Decision Record (DR) — a settled rule, and why.** One decision, written once, never edited: if it changes, a new record supersedes it. Read it when you need to know *what is true*.
+*Example:* [MP-DR-034](examples/marketplace/knowledge/businesses/decisions/MP-DR-034-orders-are-only-accepted-while-the-business-is-open-by-sched.md) — "orders are only accepted while the business is open". Context (customers ordering at 3 a.m.), the rule, its consequences.
 
-- **A rules snapshot rotted in six days.** Before KDE had a backfill path, agents reconstructed the business rules into a standalone document. Within a week it contradicted an accepted decision and the code, and its line-number citations had drifted. That failure is why backfill writes into the catalog, rule by rule, and never into a report.
-- **Diffing knowledge against code caught a wrong decision.** An *accepted* Decision Record turned out to describe behavior the code did not have. Because the decision was a canonical, indexed record, the contradiction was detectable, and it was fixed through the normal draft-and-promote flow instead of surfacing as a production bug.
-- **One backfilled domain paid for itself.** Auditing a single domain — login, sessions, user management, about fifty files — recovered 22 behavior rules into three feature specs, each rule with its evidence and, where one exists, the test that proves it. The same pass reported two accepted decisions that were never implemented, one decision the code had outgrown, and three defects, two of them security issues. Nobody had asked about any of them.
+**RFC — a proposal with open questions.** Nothing in it is true yet. It lays out a problem, options, and the questions a human has to answer before anything gets decided. When it's accepted, it becomes one or more Decision Records.
+*Example:* [MP-RFC-005](examples/marketplace/knowledge/businesses/rfcs/MP-RFC-005-multi-branch-businesses.md) — "multi-branch businesses". Should a brand with two locations be one tenant with two branches, or two businesses? Draft, unanswered, explicitly *not current truth*.
 
-That marketplace's code is private, but you can read the knowledge of one of its domains as it stood in production: [examples/marketplace](examples/marketplace/README.md) holds its merchant domain, with ten accepted decisions, two specs, two RFCs, and the baseline of its backfill.
+**Spec — how a decision behaves in detail.** Only for decisions with enough rules, edge cases and invariants that reconstructing them from code would be a risk. It carries an acceptance block (normally your tests), so "implemented" is proven, not declared.
+*Example:* [MP-SPEC-004](examples/marketplace/knowledge/businesses/specs/MP-SPEC-004-business-deactivation-and-publishing.md) — what deactivating a business does to the database, the API and the events, rule by rule, with what was removed and what replaces it.
 
-## Quick Start
+**The agent decides which one.** When you ask for a change, the agent reads the domain's knowledge and:
 
-### An existing codebase
+- If the request is clear and the rule is settled, it drafts a **Decision Record**.
+- If anything is ambiguous — two reasonable readings, a rule it isn't sure applies, a trade-off you haven't stated — it drafts an **RFC with the open questions** and hands them to you. It does not pick an answer on your behalf, ever.
+- Once a decision is promoted, if the behavior is more than a couple of rules, it drafts a **Spec** anchored to that decision before implementing.
 
-From the root of your repository:
+In practice this means the agent asks more than you're used to, and every question is one it would otherwise have answered silently in code.
+
+## Quick start
+
+Requires Node 22.6+ (only for the tools; your project can be any stack).
+
+**Existing codebase** — from the repo root:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/main/install.sh | bash -s -- orders
+curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/v0.8.0/install.sh | bash -s -- orders
 npm run knowledge -- backfill orders
 ```
 
-Then ask your coding agent to **"backfill the orders domain"**. There is nothing to paste: the installer ships the protocol as `tools/backfill-protocol.md`, and the KDE section it writes into your `AGENTS.md` tells agents to follow it. The agent audits the domain's code, compares it against any knowledge you already have, and presents each recovered rule with its evidence. You approve, reject, or edit each one; approved behavior lands as one spec per feature, and you promote it with the command the agent hands you.
+Then tell your agent: *"backfill the orders domain"*. It audits the domain's code, presents each recovered rule with its evidence, and you approve, reject or edit them one by one. Approved rules land as specs; you promote them with the command the agent hands you.
 
-Add more domains as you go (`npm run knowledge -- domain add payments --description "..." --code-paths src/payments/`) and backfill each one when you need it. Adopting in a single domain is fully supported.
-
-### A new project
-
-This is where KDE gives the most. Knowledge is written down as decisions are made, so current truth is complete from the first commit: the retrieval path never falls back to guessing from code, and the drift gate guards every domain from day one.
-
-Seed current truth with one decision your team already made:
+**New project** — same install, then record the first decision your team already made:
 
 ```bash
 npm run knowledge -- new decision orders "Orders are immutable after payment" --author <you>
 npm run knowledge -- promote DR-001 --by <you>
 ```
 
-`promote` sets the status, records you as the approver, and lists the decision in the domain's index.
+The installer is idempotent, never overwrites your knowledge, and adds a Knowledge-Driven Engineering section to `AGENTS.md` plus Claude Code hooks that run the validator on every knowledge edit. Other harnesses with post-edit hooks can be wired the same way. Details in [ADOPTING.md](ADOPTING.md).
 
-The installer is idempotent, never overwrites your knowledge, and refuses to run in a subdirectory of a repository that already uses KDE. It needs Node 22.6 or later — the tools run on any stack. Re-run it with `--upgrade` to refresh the framework's tools after a release. Details in [ADOPTING.md](ADOPTING.md).
+### Minimal adoption
 
-## How It Works
+You can run decision records alone. Install as above, skip specs, and leave `code_paths` unset. Each decision your team makes is one `new decision` plus one `promote`; the domain's `decisions/index.yaml` and generated `CONTEXT.md` tell agents which decisions are in force, and the Precedence section in `AGENTS.md` tells them what wins on conflict. The drift gate never fires: it only gates domains that have specs and declared `code_paths`. Add specs and code paths later, one domain at a time, when a decision's behavior outgrows a code comment. Details in [ADOPTING.md](ADOPTING.md#minimal-adoption).
 
-### Domains and artifacts
+## How it works
 
-Knowledge is organized by **domain** — a product or system area such as `orders` or `payments` — and inside a domain by **artifact type**, each answering one question:
+**Domains.** Knowledge is split by product area (`orders`, `payments`). Each domain has decision records, optionally specs and RFCs, and a generated `CONTEXT.md`. Other artifact types (models, contracts, flows, tasks, prompts) exist for when you need them — see the [handbook](HANDBOOK.md#artifacts).
 
-| Artifact | Answers |
-| --- | --- |
-| Decision Record | What did we decide, and why? |
-| Specification | What must the implementation do? |
-| RFC | What change are we proposing? |
-| Model | What states and transitions exist? |
-| Contract | What interface do clients depend on? |
-| User Flow, Information Architecture, Design System | How do users move, what lives where, which visual rules repeat? |
-| Task | What bounded work remains? |
-| Prompt | What context should an agent get for repeated work? |
+**Precedence.** When sources disagree, the order is fixed and agents must report the conflict, never resolve it:
 
-Domains optimize retrieval; artifact types protect meaning. Folders exist only when a domain has real content of that type.
+1. Active decision record
+2. Current spec
+3. Flows, IA, design system, playbooks
+4. The code
+5. Historical knowledge (superseded decisions, old RFCs)
+6. Tickets, wikis, chat — cite, never obey
 
-The size of a change picks the path: a simple decision goes straight to code; complex behavior gets a spec with tests; large uncertainty starts as an RFC. Not every decision needs a spec — architecture, caching or infrastructure choices usually have no product behavior for a spec to promise.
-
-### Current truth and precedence
-
-`knowledge/index.yaml` lists the domains. Each domain's `decisions/index.yaml` maps topics to the Decision Record in force, and a generated `CONTEXT.md` gives agents the domain at a glance. When sources disagree:
-
-1. An active Decision Record in the domain index
-2. A current specification that does not contradict it
-3. Information architecture, flows, design system, playbooks
-4. The implementation
-5. Historical knowledge — old RFCs, superseded decisions
-6. Raw signals — tickets, wikis, chat. Cite them; never obey them.
-
-### Lifecycle
-
-Every transition is one command that validates the repository and refreshes the manifests, or refuses and says why:
+**Lifecycle.** One command per transition; each validates and refreshes the indexes or refuses and says why.
 
 ```bash
 npm run knowledge -- new <type> <domain> "<title>" [--by agent]
-npm run knowledge -- promote <ID> --by <human>            # humans only
-npm run knowledge -- supersede <OLD-ID> --by <NEW-ID>     # humans only
-npm run knowledge -- backfill <domain>                    # opens or resumes a backfill session
-npm run knowledge -- domain add <name> --description "..." [--code-paths ...]
-npm run knowledge -- accept <SPEC-ID>                     # runs a spec's acceptance block
-npm run knowledge:check                                   # the validator
+npm run knowledge -- promote <ID> --by <human>
+npm run knowledge -- supersede <OLD-ID> --by <NEW-ID>
+npm run knowledge -- accept <SPEC-ID>        # runs the spec's acceptance block
+npm run knowledge:check                      # the validator
 ```
 
-Decision Records are superseded, not rewritten: a new record replaces the old one, and the command lists every document that depended on it.
+Decisions are superseded, never rewritten.
 
-### What CI enforces
+**CI.**
+- The **validator** checks ids, references, statuses, supersession links, stale indexes, frontmatter — and that nothing an agent drafted enters current truth without a recorded human approver.
+- The **drift gate** is the answer to [drift](DRIFT.md): a PR that changes code mapped to a domain with a current spec fails unless it also changes that domain's knowledge or declares `no-behavior-change`. It checks the result, not the process, so it catches a divergence that took a week and one that took twenty minutes of a saturated session alike.
+- **Acceptance**: a spec marked `implemented` must pass its acceptance block, normally your own tests.
 
-- **The validator**: duplicate ids, broken references and dependencies, invalid statuses, supersession links, stale index entries, required frontmatter — and the promotion gate: an agent-drafted document cannot enter current truth without a recorded human approver, and a spec cannot enter it without an active decision behind it.
-- **The drift gate**: a pull request that changes code mapped to a domain with a current spec must change that domain's knowledge, or declare `no-behavior-change` (or `implements-draft: <SPEC-ID>` for work against a draft).
-- **Acceptance**: a spec promoted to `implemented` must pass its acceptance block — normally your own test suite — in CI.
+## When to use it — and when not
 
-The installer also wires Claude Code hooks that run the validator the moment an agent edits a knowledge file; any harness with post-edit hooks can do the same.
+Use it for products with business rules, multi-tenant or permission-heavy systems, or any codebase where agents do most of the implementation.
 
-## When To Use It
+Skip it for prototypes, scripts, and code whose behavior fits in its comments.
 
-Use KDE when contributors — human or agent — need context before changing behavior: products with business rules, multi-tenant or permission-heavy systems, cross-functional trade-offs, or any codebase where agents do a large share of the implementation.
+## Honest limits
 
-Skip it for throwaway prototypes, single-purpose scripts, and code whose meaningful behavior fits in its comments.
+- **Promotion is procedural.** The validator sees that an approver is recorded, not who typed it. Branch protection and CODEOWNERS make it real.
+- **The drift gate can be rubber-stamped.** `no-behavior-change` will get pasted by reflex the same way `skip-changelog` does. Mitigation so far: the declaration sits in the PR description where reviewers see it, and the gate prints it in the CI log. Nothing counts how often each author reaches for it.
+- **One approver is a bottleneck.** The method makes approval explicit; it cannot make it careful.
 
-## Honest Limits
+## How it compares
 
-- **Promotion is a procedural guarantee.** The validator sees that an approver is recorded, not who typed it. Branch protection and CODEOWNERS make it a technical one.
-- **One approver is a bottleneck.** When one person approves every agent draft, review thins out. KDE makes approval explicit and visible; it cannot make it careful.
-- **Knowledge still takes attention.** The drift gate forces the question on every pull request; it cannot answer it for you.
+Versus **ADRs + AGENTS.md** alone: those record decisions and instruct agents, but nothing computes which decisions are current, nothing fails a PR when code and decisions diverge, and nothing gates agent-written knowledge behind a human.
 
-## Prior Art
+Versus **spec-driven tools** (Spec Kit, Kiro specs, OpenSpec, Cursor rules): those drive one task from a spec. Knowledge-Driven Engineering is the persistent layer underneath — decisions with history, precedence between sources, and a backfill path for rules that only exist in code.
 
-The pieces are deliberately familiar: Decision Records (Nygard's ADRs), RFC processes, spec-driven development, the `AGENTS.md` convention, and domain partitioning from DDD. KDE is an operational synthesis for teams where agents implement, and its delta is what that tradition leaves out: a computable projection of current truth, explicit precedence between sources, consumption rules for agents, knowledge integrity as CI, and a governed path for knowledge that so far exists only in code.
+Versus **OKF** (Google Cloud): same raw material, different half of the problem. OKF standardizes how knowledge is written so any tool can read it; the method governs whether you can trust it. [Detailed comparison](HANDBOOK.md#relation-to-okf).
 
-The raw material — markdown files with a short header, linked to each other, versioned in git — is the same one Google Cloud's [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf) (OKF) uses, but the two solve different halves of the problem. OKF is a shared way to write knowledge down so any tool can read it, and it is deliberately forgiving: a reader takes whatever it finds. KDE is about knowledge you can rely on while you work:
+## This repository
 
-- **Trustworthy.** Nothing an agent writes counts until a person approves it, and a pull request fails when the code and the knowledge stop agreeing.
-- **Checkable after the fact.** Decisions are replaced, never rewritten, so you can see who approved what, when, and what it replaced; a spec's tests can be rerun at any time to show it still holds.
-- **Quick to find.** An agent starting a task does not search the whole repository: it goes to the area it is changing and reads the decisions that apply today, then the code — in the field, a domain's rules read in about 8,000 tokens instead of the 130,000 it took to work them out from the code.
+Both the definition of the method and a working instance of it: the method's own decisions live in `knowledge/methodology/` under the same lifecycle.
 
-OKF does a few things KDE does not, such as setting a date when a document should be checked again and recording more than one reviewer. The [handbook](HANDBOOK.md#relation-to-okf) has the detailed comparison.
-
-## This Repository
-
-It is two things: the definition of the method and a working instance of it. The method's own decisions live in `knowledge/methodology/` and follow the same lifecycle, so every rule above traces to a Decision Record.
-
-- [ADOPTING.md](ADOPTING.md) — installing, upgrading, backfilling, minimal adoption
+- [ADOPTING.md](ADOPTING.md) — install, upgrade, backfill, what happened in the first production adoption
 - [HANDBOOK.md](HANDBOOK.md) — the method in full
 - [AGENTS.md](AGENTS.md) — the rules agents follow
-- [examples/marketplace](examples/marketplace/README.md) — one domain excerpted from the first production adoption
-- [examples/food-delivery](examples/food-delivery/README.md) — a small worked example
-- [CONTRIBUTING.md](CONTRIBUTING.md) and [REVIEW.md](REVIEW.md) — changing the method
+- [examples/marketplace](examples/marketplace/README.md) — one real domain: ten decisions, two specs, two RFCs, backfill baseline
+- [CONTRIBUTING.md](CONTRIBUTING.md) · [REVIEW.md](REVIEW.md)
 
 ```bash
 npm test                 # the tools' test suite
-npm run knowledge:check  # validate this repository's own knowledge
+npm run knowledge:check  # validate this repo's own knowledge
 ```

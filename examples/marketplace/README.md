@@ -20,5 +20,7 @@ The records are unedited except for these changes, which let the excerpt stand a
 - Frontmatter references (`depends_on`, `related`, …) and `scope` values that point outside this domain were removed, because the validator rejects targets that do not exist. Body text still cites them, for example `MP-DR-008` or `MP-SPEC-005`, which live in domains not included here.
 - The product's name and city were removed.
 - `CONTEXT.md` was regenerated for the new paths.
+- `knowledge/index.yaml` declares the two current specs under `current`, so the generated `CONTEXT.md` lists them as current truth. The original catalog had not been updated after the specs were promoted.
+- Not a change, but worth knowing: `MP-DR-034` carries a "Revision note: edited in place after acceptance". That happened before launch, while the record was days old and its dependents were still being written. The method says decisions are superseded, never rewritten; in a project in production the same change would have been a new record promoted with `knowledge supersede`, leaving the original as history.
 
 The application code is not included. The paths in the domain README's code map and the `file:line` citations in the records point to the private codebase.
