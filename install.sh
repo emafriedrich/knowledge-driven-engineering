@@ -2,7 +2,7 @@
 # Installs Knowledge-Driven Engineering scaffolding into the current repository.
 #
 # Usage, from the root of your repository:
-#   curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/main/install.sh | bash -s -- <first-domain>
+#   curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/v0.8.0/install.sh | bash -s -- <first-domain>
 #
 # From a local clone (offline / development):
 #   KDE_SOURCE=/path/to/knowledge-driven-engineering bash install.sh <first-domain>
@@ -10,8 +10,10 @@
 # <first-domain> only seeds a fresh install. On a repository that already has
 # knowledge/index.yaml, add domains with `npm run knowledge -- domain add <name>`.
 #
-# Pin a release instead of main:
-#   KDE_REF=v0.1.0 curl -fsSL .../install.sh | bash -s -- <first-domain>
+# The installer downloads the release named on line 1 of the script (the tag that
+# matches its own version). Another release, a branch or a commit:
+#   KDE_VERSION=main curl -fsSL .../install.sh | bash -s -- <first-domain>
+# (KDE_REF is honoured as an older name for the same variable.)
 #
 # Refresh framework-owned files after a release (DR-011):
 #   curl -fsSL .../install.sh | bash -s -- --upgrade
@@ -33,7 +35,10 @@ for arg in "$@"; do
   esac
 done
 REPO_URL="https://github.com/emafriedrich/knowledge-driven-engineering"
-REF="${KDE_REF:-main}"
+# Release this copy of the installer belongs to; bumped with package.json on
+# every release so a curl of the script installs the matching tools.
+DEFAULT_REF="v0.8.0"
+REF="${KDE_VERSION:-${KDE_REF:-$DEFAULT_REF}}"
 
 say()  { printf '%s\n' "$*"; }
 add()  { say "  add   $1"; }
@@ -74,19 +79,19 @@ STALE=""
 framework_file() {
   local prefix="$1" src="$2" dest="$3" suffix="${4:-}" tmp
   tmp="$(mktemp)"
-  { printf '%s kde-version: %s%s\n' "$prefix" "$KDE_VERSION" "$suffix"; cat "$src"; } > "$tmp"
+  { printf '%s kde-version: %s%s\n' "$prefix" "$FRAMEWORK_VERSION" "$suffix"; cat "$src"; } > "$tmp"
   if [ ! -e "$dest" ]; then
     cat "$tmp" > "$dest"; add "$dest"
   elif cmp -s "$tmp" "$dest"; then
-    say "  ok    $dest (kde ${KDE_VERSION})"
+    say "  ok    $dest (kde ${FRAMEWORK_VERSION})"
   elif [ "$UPGRADE" -eq 1 ]; then
     local from; from="$(installed_version "$dest")"
-    if [ "$from" = "$KDE_VERSION" ]; then
+    if [ "$from" = "$FRAMEWORK_VERSION" ]; then
       # Same version, different content: the adopter edited the file. Overwrite,
       # but say so — framework-owned files are not an extension point.
-      say "  WARN  $dest had local edits; overwritten with kde ${KDE_VERSION}. Framework-owned files are not meant to be edited: fork the framework if you need different tooling."
+      say "  WARN  $dest had local edits; overwritten with kde ${FRAMEWORK_VERSION}. Framework-owned files are not meant to be edited: fork the framework if you need different tooling."
     else
-      say "  upgrade $dest (${from} -> ${KDE_VERSION})"
+      say "  upgrade $dest (${from} -> ${FRAMEWORK_VERSION})"
     fi
     cat "$tmp" > "$dest"
   else
@@ -104,24 +109,24 @@ else
   TMP="$(mktemp -d)"
   CLEANUP="$TMP"
   say "Downloading ${REPO_URL}@${REF} ..."
-  # /archive/<ref>.tar.gz resolves branches, tags and commits alike, so KDE_REF
+  # /archive/<ref>.tar.gz resolves branches, tags and commits alike, so KDE_VERSION
   # can pin a release (v0.1.0) as well as track main.
   curl -fsSL "${REPO_URL}/archive/${REF}.tar.gz" | tar -xz -C "$TMP"
   SRC="$(find "$TMP" -maxdepth 1 -mindepth 1 -type d | head -1)"
 fi
 trap '[ -n "$CLEANUP" ] && rm -rf "$CLEANUP"' EXIT
 
-# The framework version is package.json's version in this repository (DR-011).
-KDE_VERSION="$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$SRC/package.json" | head -1)"
-if [ -z "$KDE_VERSION" ]; then
+# The framework version is package.json's version in the downloaded source (DR-011).
+FRAMEWORK_VERSION="$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$SRC/package.json" | head -1)"
+if [ -z "$FRAMEWORK_VERSION" ]; then
   say "install.sh: could not read version from ${SRC}/package.json" >&2
   exit 1
 fi
 
 if [ "$UPGRADE" -eq 1 ]; then
-  say "Upgrading Knowledge-Driven Engineering framework files in $(pwd) to ${KDE_VERSION}"
+  say "Upgrading Knowledge-Driven Engineering framework files in $(pwd) to ${FRAMEWORK_VERSION}"
 else
-  say "Installing Knowledge-Driven Engineering ${KDE_VERSION} into $(pwd)"
+  say "Installing Knowledge-Driven Engineering ${FRAMEWORK_VERSION} into $(pwd)"
 fi
 
 # --- Tools and templates -----------------------------------------------------
@@ -141,7 +146,7 @@ for src in "$SRC"/templates/*.md; do
   else
     # Templates are adopter-owned and never overwritten (DR-011); a note, not a
     # WARN, so a team that customised them on purpose is not trained to ignore warnings.
-    say "  note  templates/$base differs from kde ${KDE_VERSION} (yours; not touched) — compare: ${REPO_URL}/blob/${REF}/templates/$base"
+    say "  note  templates/$base differs from kde ${FRAMEWORK_VERSION} (yours; not touched) — compare: ${REPO_URL}/blob/${REF}/templates/$base"
   fi
 done
 
@@ -297,7 +302,7 @@ if [ -e .claude/settings.json ]; then
     if [ "$status" -eq 3 ]; then
       skip ".claude/settings.json KDE hooks"
     else
-      say "  WARN  could not merge hooks into .claude/settings.json; add them manually from ${REPO_URL}/blob/main/.claude/settings.json"
+      say "  WARN  could not merge hooks into .claude/settings.json; add them manually from ${REPO_URL}/blob/${REF}/.claude/settings.json"
     fi
   fi
 else
@@ -336,6 +341,16 @@ When sources disagree: active Decision Record > current Specification > other do
 
 RFC proposes. Decision Record decides. Spec promises. Tests prove. A simple decision may go straight from a Decision Record to code; citing it in a comment (\`// DR-017 rule 3\`) is desirable and does not by itself call for a spec. Create or update a spec when behavior needs an explicit, independently testable contract: multiple rules, interactions, invariants, edge cases, or acceptance criteria that should not be reconstructed from code and decisions — or rules expected to change while the decision stays. Draft an RFC first when the change is uncertain or cross-domain.
 
+#### Choosing the artifact
+
+When asked for a change, read the domain's knowledge first, then pick one artifact:
+
+- The request is clear and the rule it needs is settled, or the request itself is the decision: draft a Decision Record and stop there. A simple decision goes from the record to code.
+- If a request admits more than one reasonable reading, or a rule's applicability is uncertain, draft an RFC listing the open questions and stop. Do not choose an answer on the human's behalf, and do not implement against an assumption. When the human resolves the questions, the RFC becomes one or more Decision Records.
+- Once a decision is promoted, if the behavior it implies is more than a couple of rules — interactions, invariants, edge cases — draft a Spec anchored to that decision (\`depends_on\`) before implementing. Otherwise implement against the decision and cite it in code.
+
+Every question you would otherwise have answered silently in code belongs in the RFC.
+
 ### Hard Rules
 
 - Do not invent product behavior.
@@ -360,7 +375,7 @@ if [ -e AGENTS.md ] && grep -q '<!-- kde:begin -->' AGENTS.md; then
   AGENTS_CUR="$(mktemp)"
   awk '/<!-- kde:begin -->/ { on = 1 } on { print } /<!-- kde:end -->/ { on = 0 }' AGENTS.md > "$AGENTS_CUR"
   if cmp -s "$AGENTS_SRC" "$AGENTS_CUR"; then
-    say "  ok    AGENTS.md KDE section (kde ${KDE_VERSION})"
+    say "  ok    AGENTS.md KDE section (kde ${FRAMEWORK_VERSION})"
   elif ! grep -q '<!-- kde:end -->' AGENTS.md; then
     say "  WARN  AGENTS.md has a kde:begin marker without kde:end; section left alone. Restore the end marker and re-run."
   elif [ "$UPGRADE" -eq 1 ]; then
@@ -372,7 +387,7 @@ if [ -e AGENTS.md ] && grep -q '<!-- kde:begin -->' AGENTS.md; then
     ' AGENTS.md > "$AGENTS_NEW"
     cat "$AGENTS_NEW" > AGENTS.md
     rm -f "$AGENTS_NEW"
-    say "  upgrade AGENTS.md KDE section (-> ${KDE_VERSION}); text outside the markers untouched. Rules of your own belong outside the markers."
+    say "  upgrade AGENTS.md KDE section (-> ${FRAMEWORK_VERSION}); text outside the markers untouched. Rules of your own belong outside the markers."
   else
     skip "AGENTS.md KDE section"
     STALE="${STALE} AGENTS.md:KDE-section"
@@ -411,7 +426,7 @@ fi
 # through the warning (DR-011).
 if [ -n "$STALE" ]; then
   say ""
-  say "  WARN  framework-owned files differ from kde ${KDE_VERSION} (installed: $(installed_version tools/knowledge-check.mts)):"
+  say "  WARN  framework-owned files differ from kde ${FRAMEWORK_VERSION} (installed: $(installed_version tools/knowledge-check.mts)):"
   for f in $STALE; do say "        - $f"; done
   say "        Re-run with --upgrade to refresh them. Adopter-owned files (knowledge/, templates/, AGENTS.md outside the kde markers) are never touched."
 fi
@@ -428,4 +443,4 @@ say "       npm run knowledge -- new decision ${DOMAIN:-<domain>} \"<title>\" --
 say "       npm run knowledge -- promote <ID> --by <you>"
 say "  3. Enable branch protection with code-owner review so knowledge promotion needs a human."
 say ""
-say "Full guide: ${REPO_URL}/blob/main/ADOPTING.md"
+say "Full guide: ${REPO_URL}/blob/${REF}/ADOPTING.md"

@@ -67,6 +67,16 @@ Update an existing spec when intended behavior changes and the decision context 
 
 Create or update a task only after the canonical knowledge that justifies it exists.
 
+### Choosing the artifact
+
+When asked for a change, read the domain's knowledge first, then pick one artifact:
+
+- The request is clear and the rule it needs is settled, or the request itself is the decision: draft a Decision Record and stop there. A simple decision goes from the record to code.
+- If a request admits more than one reasonable reading, or a rule's applicability is uncertain, draft an RFC listing the open questions and stop. Do not choose an answer on the human's behalf, and do not implement against an assumption. When the human resolves the questions, the RFC becomes one or more Decision Records.
+- Once a decision is promoted, if the behavior it implies is more than a couple of rules — interactions, invariants, edge cases — draft a Spec anchored to that decision (`depends_on`) before implementing. Otherwise implement against the decision and cite it in code.
+
+Every question you would otherwise have answered silently in code belongs in the RFC.
+
 ## Hard Rules
 
 - Do not invent product behavior.
