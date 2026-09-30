@@ -44,6 +44,7 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 - `DR-019` (draft, agent-drafted): Agents draft a decision when the request is clear, an RFC when it is ambiguous, and a spec when behavior has many rules
 - `KDE-RFC-010` (draft, agent-drafted): Distribute framework tooling as an npm package
 - `KDE-RFC-014` (draft, agent-drafted): Agents choose the artifact and never assume an answer
+- `KDE-RFC-015` (draft, agent-drafted): Re-anchor agents in-session: the hook returns the domain manifest on code edits
 
 ## Rules
 
