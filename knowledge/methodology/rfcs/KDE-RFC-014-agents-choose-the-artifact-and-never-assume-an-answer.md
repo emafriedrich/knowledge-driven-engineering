@@ -1,11 +1,12 @@
 ---
 id: KDE-RFC-014
 title: Agents choose the artifact and never assume an answer
-status: draft
+status: accepted
 created: 2026-09-30
 updated: 2026-09-30
+authors: [emafriedrich]
 drafted_by: agent
-approved_by: []
+approved_by: [emafriedrich]
 motivated_by: The README rewrite (2026-09-30) promises adopters that the agent picks the artifact for them and never answers an open question on their behalf; AGENTS.md described what each artifact is for but gave the agent no rule for choosing one, or for stopping when a request is ambiguous
 scope: [methodology]
 tags: [rfc, agents]

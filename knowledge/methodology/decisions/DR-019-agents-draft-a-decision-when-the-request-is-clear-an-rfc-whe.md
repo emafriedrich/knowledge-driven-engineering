@@ -1,11 +1,12 @@
 ---
 id: DR-019
 title: Agents draft a decision when the request is clear, an RFC when it is ambiguous, and a spec when behavior has many rules
-status: draft
+status: accepted
 created: 2026-09-30
 updated: 2026-09-30
+authors: [emafriedrich]
 drafted_by: agent
-approved_by: []
+approved_by: [emafriedrich]
 scope: [methodology]
 tags: [decision, agents]
 depends_on: []
