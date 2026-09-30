@@ -580,6 +580,22 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
     }
   }
 
+  // A current spec no domain declares under `current:` is missing from the domain's
+  // CONTEXT.md, the retrieval path agents read first (DR-020). Other current documents
+  // may be left out on purpose, so only specs are checked, and only as a warning.
+  const anchoredIds = new Set(catalogs.flatMap((catalog) => [...catalog.domains.values()].flatMap((domain) => Object.values(domain.current))));
+  for (const document of documents) {
+    const id = String(document.data.id ?? '');
+    const status = String(document.data.status);
+    if (!id || documentType(document.data) !== 'spec' || (status !== 'current' && status !== 'implemented')) continue;
+    const catalog = catalogs
+      .filter((candidate) => document.file.startsWith(candidate.rootDir + '/'))
+      .sort((a, b) => b.rootDir.length - a.rootDir.length)[0];
+    if (catalog && !anchoredIds.has(id)) {
+      warnings.push(`${relative(root, document.file)} (${id}) is a ${status} spec that no domain declares under current: in ${relative(root, catalog.file)}; declare it: npm run knowledge -- promote ${id} --by <human> --topic <name>`);
+    }
+  }
+
   return { errors, warnings, documents };
 }
 

@@ -220,7 +220,7 @@ Operational learning can update a spec, add a playbook, or trigger a new RFC. Us
 Every transition above is one command (DR-013); each ends by running the validator and refreshing the domain manifests, and the transitions roll back if they would leave an error behind.
 
 - `npm run knowledge -- new <type> <domain> "<title>" [--by agent] [--author <name>]` — copy the template, allocate the next id in the domain's own prefix, fill the metadata.
-- `npm run knowledge -- promote <ID> --by <human> [--topic <name>]` — set the active status, record the approver, index a decision under its topic. Refused, with the validator's reason, when the document is not ready.
+- `npm run knowledge -- promote <ID> --by <human> [--topic <name>]` — set the active status, record the approver, and name where the document stands: a decision is indexed under its topic, and any document that becomes `current` is declared under that name in its domain's `current:` so `CONTEXT.md` lists it. Without `--topic` a current document is promoted but not declared, and the command says so. Refused, with the validator's reason, when the document is not ready.
 - `npm run knowledge -- supersede <OLD-ID> --by <NEW-ID> [--approved-by <human>]` — link both records, re-point or retire the topic, promote a draft replacement, list the documents that depend on the old one.
 - `npm run knowledge -- domain add <name> --description "<text>" [--code-paths a/ b/]` — directory, README, empty decision index, catalog entry, manifest.
 - `npm run knowledge -- backfill <domain>` — start or resume a brownfield backfill session (DR-018): scaffold the session file and the draft baseline decision, or report what is approved, rejected, and still pending.

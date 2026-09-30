@@ -23,7 +23,7 @@ What you do **not** copy: HANDBOOK.md, the `methodology` domain, `examples/`, `t
 ## One-Command Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/v0.8.0/install.sh | bash -s -- <your-first-domain>
+curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/v0.8.1/install.sh | bash -s -- <your-first-domain>
 ```
 
 `install.sh` performs the manual steps below, is idempotent, and never overwrites an existing file (it skips and tells you). It detects your package manager (npm, pnpm — workspaces included, yarn, bun) for the `yaml` dependency, and a dependency failure warns instead of aborting the install. Run it from the root of your repository; pass your first domain name as the argument. It refuses to run in a subdirectory of a repository that already runs Knowledge-Driven Engineering — a second catalog nothing reads — and names the directory to run it from. The argument only seeds a fresh install: on a repository that already has `knowledge/index.yaml` the installer creates no domain and points you to `npm run knowledge -- domain add <name>`. Installing, upgrading (`--upgrade`) and adding a domain are three separate actions. Offline installs work from a local clone: `KDE_SOURCE=/path/to/clone bash install.sh <domain>`. The script installs the release it belongs to (the tag in its own URL); to install another release, a branch or a commit, set `KDE_VERSION=main` (or `KDE_VERSION=v0.7.2`) in front of the command.
@@ -38,7 +38,7 @@ The installer classifies what it writes by owner (DR-011):
 Every run compares the installed markers with the fetched version and warns when a framework-owned file differs — whether from a newer release upstream or a local edit. To refresh them:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/v0.8.0/install.sh | bash -s -- --upgrade
+curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/v0.8.1/install.sh | bash -s -- --upgrade
 ```
 
 `--upgrade` replaces framework-owned files that differ and reports each one (`upgrade tools/knowledge-check.mts (0.1.0 -> 0.2.0)`). A framework-owned file you edited locally is overwritten too, with an explicit `WARN` line naming it. Framework-owned files are not an extension point: if you need different validation behaviour, fork this repository and install from your fork; if the change would help everyone, contributions are welcome. Adopter-owned files are not touched by `--upgrade`. Templates are never overwritten; the installer prints a `note` line for each one that differs from the release, with the upstream URL, so you can decide whether to adopt the newer shape. Without branch protection and CODEOWNERS, human-only promotion is a procedural guarantee: the validator sees that an approver is recorded, not who typed it. New template files that a release adds (as `templates/model.md` and `templates/contract.md` were) arrive on a plain run, because the installer adds any file that does not exist yet.

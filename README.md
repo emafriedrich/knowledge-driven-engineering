@@ -91,7 +91,7 @@ Requires Node 22.6+ (only for the tools; your project can be any stack).
 **Existing codebase** — from the repo root:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/v0.8.0/install.sh | bash -s -- orders
+curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/v0.8.1/install.sh | bash -s -- orders
 npm run knowledge -- backfill orders
 ```
 
