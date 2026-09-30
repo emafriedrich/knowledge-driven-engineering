@@ -59,6 +59,10 @@ The agent drafted it; a human approved it; the validator refuses any record with
 
 That domain reads in ~8k tokens. Reconstructing the same rules from its ~50 files of code took an agent ~130k (n=1, one-time extraction — see [in the field](ADOPTING.md#in-the-field)).
 
+## Why knowledge drifts
+
+Writing the rules down is the easy part. The hard part is that they stop being true: someone changes checkout and nobody touches the decision that governs it, or an agent reads the rules at the start of a session and, a hundred thousand tokens later, implements something else. A human discounts a stale document. An agent obeys it literally, and a rule that no longer holds looks exactly like one that does. That is drift, and discipline does not fix it. What has held up is mechanical: a change to governed code cannot merge without touching the knowledge that governs it, or saying out loud that it does not need to. [More on drift, and what the gate does not catch](DRIFT.md).
+
 ## Three documents, and who writes which
 
 You don't need to know what an RFC is to use this. There are three kinds of document that matter, and the agent picks the right one for you.
@@ -133,7 +137,7 @@ Decisions are superseded, never rewritten.
 
 **CI.**
 - The **validator** checks ids, references, statuses, supersession links, stale indexes, frontmatter — and that nothing an agent drafted enters current truth without a recorded human approver.
-- The **drift gate** fails a PR that changes code mapped to a domain with a current spec unless the PR also changes that domain's knowledge or declares `no-behavior-change`.
+- The **drift gate** is the answer to [drift](DRIFT.md): a PR that changes code mapped to a domain with a current spec fails unless it also changes that domain's knowledge or declares `no-behavior-change`. It checks the result, not the process, so it catches a divergence that took a week and one that took twenty minutes of a saturated session alike.
 - **Acceptance**: a spec marked `implemented` must pass its acceptance block, normally your own tests.
 
 ## When to use it — and when not

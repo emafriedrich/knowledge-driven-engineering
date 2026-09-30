@@ -54,7 +54,7 @@ curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engin
    ```
 
    Non-Node projects can run it with any Node >= 22.6 installed; the tool has one dependency.
-4. **Wire CI.** Copy `.github/workflows/ci.yml` (or the equivalent in your CI) so every PR runs `knowledge:check`. Without CI the method is an honor system. Copy `tools/knowledge-context.mts` and `tools/drift-gate.mts` too, declare `code_paths` on your domains, and add a CODEOWNERS file plus branch protection so knowledge promotion requires owner approval.
+4. **Wire CI.** Copy `.github/workflows/ci.yml` (or the equivalent in your CI) so every PR runs `knowledge:check`. Without CI the method is an honor system. Copy `tools/knowledge-context.mts` and `tools/drift-gate.mts` too, declare `code_paths` on your domains, and add a CODEOWNERS file plus branch protection so knowledge promotion requires owner approval. What the gate catches, and what it does not, is in [DRIFT.md](DRIFT.md).
 5. **Add the agent rules.** Copy the section `install.sh` writes — from `<!-- kde:begin -->` to `<!-- kde:end -->`, markers included — into your project's `AGENTS.md`. The markers are what lets `install.sh --upgrade` refresh the rules later (DR-017); put rules of your own outside them.
 6. **Seed current truth.** Write the first Decision Record for a decision your team already made, list it in the domain `decisions/index.yaml`, and anchor the domain in `knowledge/index.yaml`. One real decision beats ten empty folders.
 7. **Grow on demand.** Add artifact folders (`specs/`, `flows/`, `rfcs/`) only when the domain has real content of that type, and new domains only when work needs a stable retrieval boundary.

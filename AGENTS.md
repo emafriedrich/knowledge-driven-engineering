@@ -11,6 +11,7 @@ This file is the only document loaded every session. Read the rest on demand, at
 - `CONTRIBUTING.md`: the change process. Read before changing methodology rules, templates, or the validator.
 - `templates/`: canonical artifact shapes. Copy the matching template when creating any knowledge document.
 - `ADOPTING.md`: only for setting the method up in another repository.
+- `DRIFT.md`: what the drift gate catches and does not. Read when a pull request fails the gate.
 
 ## Retrieval Order
 
