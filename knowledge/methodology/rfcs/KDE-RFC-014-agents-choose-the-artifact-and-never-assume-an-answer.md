@@ -49,9 +49,11 @@ Nothing here changes the lifecycle: agents still draft everything and promote no
 
 ## Open Questions
 
-- Should the stop condition also apply during a backfill session (KDE-PROMPT-002), where the agent presents recovered rules with evidence and the human disposes of each one? The session protocol already has the human in the loop per rule; the proposal is that it does not change, and that a recovered rule whose reading is unclear is presented as a question rather than a rule.
-- "More than a couple of rules" is deliberately a judgment call, as it is in DR-016. Should the subsection give a number? The proposal is no: the creation criteria in HANDBOOK.md already list the signals (interactions, invariants, edge cases, acceptance criteria), and a number invites gaming.
+Resolved at review (2026-09-30):
+
+- The stop condition does not change the backfill session (KDE-PROMPT-002): the human already disposes of each recovered rule on sight. A recovered rule whose reading is unclear is presented as a question, not as a rule.
+- "More than a couple of rules" stays a judgment call, as in DR-016. No number: the creation criteria in HANDBOOK.md already list the signals (interactions, invariants, edge cases, acceptance criteria), and a threshold invites gaming.
 
 ## Outcome
 
-<!-- Fill after review: accepted, rejected, or deferred, with links to resulting decisions/specs. -->
+Accepted on 2026-09-30. Decision recorded in DR-019. Shipped: the "Choosing the artifact" subsection in AGENTS.md and in the framework-owned section `install.sh` writes, the installer test that asserts the section reaches adopters verbatim, and the rule in the coding-agent context template (KDE-PROMPT-001).
