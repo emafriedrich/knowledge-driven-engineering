@@ -9,6 +9,32 @@ No server, no database. Markdown files, one validator, a handful of commands.
 > **Status:** early. One production adoption, API may change between commits. Pin a commit if you depend on it.
 > **License:** [MIT](LICENSE)
 
+## Why this exists
+
+Agents write fast. They don't know your business rules, so when one is missing, they invent it — a different answer every time, decided by nobody. And whether or not that invented rule ever gets written down, it quietly becomes "how things work": nothing marks it as invented, so the next agent, or the next person, reads it as settled and builds on top of it.
+
+## Five problems, and what closes each one
+
+### "My agent is guessing your rules"
+**Rules live in the repo, and the agent reads them before it touches code.**
+Decisions and behavior rules sit in the repository as markdown, next to the code they govern — not in your head, not in a wiki nobody opens. Before changing anything, the agent reads what's written for that part of the product.
+
+### "Written rules go stale the moment nobody's looking"
+**A gate blocks the merge until the rules catch up.**
+Someone changes checkout and nobody touches the decision that governs it. An agent reads the rules at the start of a session, and a hundred thousand tokens later implements something else. A human discounts a stale document on sight; an agent obeys it literally — a rule that no longer holds looks exactly like one that does. The drift gate makes this mechanical: a PR that changes code mapped to a domain with a current spec fails CI unless it also updates that domain's knowledge, or says explicitly that behavior didn't change. [More on drift, and what the gate does not catch](DRIFT.md).
+
+### "Agents can't tell a settled rule from a draft idea"
+**One generated file says what's true right now.**
+Every domain gets a `CONTEXT.md`, rebuilt automatically, that lists the decisions currently in force — separately from proposals still open and decisions already superseded. The agent is told, in writing, what not to treat as truth.
+
+### "When something's unclear, agents just pick an answer and move on"
+**Agents ask, a human decides — in writing.**
+If a request is ambiguous, the agent writes down the open question instead of silently resolving it in code. Nothing an agent drafts becomes current truth without a human approver recorded against it.
+
+### "Nobody has time to document the rules already buried in old code"
+**One command pulls them out; you approve each one.**
+A backfill audits an existing domain's code, surfaces every rule it finds together with the code that implies it, and you approve, reject, or edit them one at a time — no blank-page rewrite of a system that already works.
+
 ## What it looks like
 
 A real decision record, from the `businesses` domain of the first production adoption ([full file](examples/marketplace/knowledge/businesses/decisions/MP-DR-034-orders-are-only-accepted-while-the-business-is-open-by-sched.md)):
@@ -59,13 +85,43 @@ The agent drafted it; a human approved it; the validator refuses any record with
 
 That domain reads in ~8k tokens. Reconstructing the same rules from its ~50 files of code took an agent ~130k (n=1, one-time extraction — see [in the field](ADOPTING.md#in-the-field)).
 
-## Why knowledge drifts
+## Quick start
 
-Writing the rules down is the easy part. The hard part is that they stop being true: someone changes checkout and nobody touches the decision that governs it, or an agent reads the rules at the start of a session and, a hundred thousand tokens later, implements something else. A human discounts a stale document. An agent obeys it literally, and a rule that no longer holds looks exactly like one that does. That is drift, and discipline does not fix it. What has held up is mechanical: a change to governed code cannot merge without touching the knowledge that governs it, or saying out loud that it does not need to. [More on drift, and what the gate does not catch](DRIFT.md).
+Requires Node 22.6+ (only for the tools; your project can be any stack).
 
-## Three documents, and who writes which
+**Existing codebase** — from the repo root:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/v0.8.1/install.sh | bash -s -- orders
+npm run knowledge -- backfill orders
+```
+
+Then tell your agent: *"backfill the orders domain"*. It audits the domain's code, presents each recovered rule with its evidence, and you approve, reject or edit them one by one. Approved rules land as specs; you promote them with the command the agent hands you.
+
+**New project** — same install, then record the first decision your team already made:
+
+```bash
+npm run knowledge -- new decision orders "Orders are immutable after payment" --author <you>
+npm run knowledge -- promote DR-001 --by <you>
+```
+
+The installer is idempotent, never overwrites your knowledge, and adds a Knowledge-Driven Engineering section to `AGENTS.md` plus Claude Code hooks that run the validator on every knowledge edit. Other harnesses with post-edit hooks can be wired the same way. Details in [ADOPTING.md](ADOPTING.md).
+
+### Minimal adoption
+
+You can run decision records alone. Install as above, skip specs, and leave `code_paths` unset. Each decision your team makes is one `new decision` plus one `promote`; the domain's `decisions/index.yaml` and generated `CONTEXT.md` tell agents which decisions are in force, and the Precedence section in `AGENTS.md` tells them what wins on conflict. The drift gate never fires: it only gates domains that have specs and declared `code_paths`. Add specs and code paths later, one domain at a time, when a decision's behavior outgrows a code comment. Details in [ADOPTING.md](ADOPTING.md#minimal-adoption).
+
+## The vocabulary, if you want it
 
 You don't need to know what an RFC is to use this. There are three kinds of document that matter, and the agent picks the right one for you.
+
+Each one exists to make something checkable instead of assumed:
+
+- A **Decision Record** freezes a rule once it's approved. The validator won't count it as current unless a human approver is recorded against it — so "current" is a fact you can check, not an opinion about what the code implies.
+- An **RFC** is a proposal marked, explicitly, as not-yet-true. It exists so an agent never mistakes an open question for a settled rule.
+- A **Spec** carries an acceptance block — normally your own tests — so "implemented" is proven, not declared.
+
+Together, they turn "what's true" into something CI can check: an approver recorded, an RFC still open, a spec's acceptance block passing. That's what the drift gate checks against — code changes without a matching change here, and the gate fails.
 
 **Decision Record (DR) — a settled rule, and why.** One decision, written once, never edited: if it changes, a new record supersedes it. Read it when you need to know *what is true*.
 *Example:* [MP-DR-034](examples/marketplace/knowledge/businesses/decisions/MP-DR-034-orders-are-only-accepted-while-the-business-is-open-by-sched.md) — "orders are only accepted while the business is open". Context (customers ordering at 3 a.m.), the rule, its consequences.
@@ -101,32 +157,6 @@ Decisions, RFCs and specs carry almost all the weight. The rest are optional; re
 | **Prompt** | What context should an agent receive? | You want the agent's starting context versioned and reviewed like any other rule. |
 
 For scale: the first production adoption holds 65 decisions, 12 specs and 8 RFCs, plus one vision, model, contract and design-system document each. No tasks, playbooks or prompts. [Every type in full](HANDBOOK.md#artifacts).
-
-## Quick start
-
-Requires Node 22.6+ (only for the tools; your project can be any stack).
-
-**Existing codebase** — from the repo root:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/emafriedrich/knowledge-driven-engineering/v0.8.1/install.sh | bash -s -- orders
-npm run knowledge -- backfill orders
-```
-
-Then tell your agent: *"backfill the orders domain"*. It audits the domain's code, presents each recovered rule with its evidence, and you approve, reject or edit them one by one. Approved rules land as specs; you promote them with the command the agent hands you.
-
-**New project** — same install, then record the first decision your team already made:
-
-```bash
-npm run knowledge -- new decision orders "Orders are immutable after payment" --author <you>
-npm run knowledge -- promote DR-001 --by <you>
-```
-
-The installer is idempotent, never overwrites your knowledge, and adds a Knowledge-Driven Engineering section to `AGENTS.md` plus Claude Code hooks that run the validator on every knowledge edit. Other harnesses with post-edit hooks can be wired the same way. Details in [ADOPTING.md](ADOPTING.md).
-
-### Minimal adoption
-
-You can run decision records alone. Install as above, skip specs, and leave `code_paths` unset. Each decision your team makes is one `new decision` plus one `promote`; the domain's `decisions/index.yaml` and generated `CONTEXT.md` tell agents which decisions are in force, and the Precedence section in `AGENTS.md` tells them what wins on conflict. The drift gate never fires: it only gates domains that have specs and declared `code_paths`. Add specs and code paths later, one domain at a time, when a decision's behavior outgrows a code comment. Details in [ADOPTING.md](ADOPTING.md#minimal-adoption).
 
 ## How it works
 
