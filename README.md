@@ -202,11 +202,7 @@ Skip it for prototypes, scripts, and code whose behavior fits in its comments.
 
 ## How it compares
 
-Versus **ADRs + AGENTS.md** alone: those record decisions and instruct agents, but nothing computes which decisions are current, nothing fails a PR when code and decisions diverge, and nothing gates agent-written knowledge behind a human.
-
-Versus **spec-driven tools** (Spec Kit, Kiro specs, OpenSpec, Cursor rules): those drive one task from a spec. Knowledge-Driven Engineering is the persistent layer underneath — decisions with history, precedence between sources, and a backfill path for rules that only exist in code.
-
-Versus **OKF** (Google Cloud): same raw material, different half of the problem. OKF standardizes how knowledge is written so any tool can read it; the method governs whether you can trust it. [Detailed comparison](HANDBOOK.md#relation-to-okf).
+Versus ADRs, spec-driven tools, OpenSpec and OKF: [COMPARISON.md](COMPARISON.md).
 
 ## This repository
 
