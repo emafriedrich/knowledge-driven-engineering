@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 
-import { checkKnowledge, documentType, loadCatalogs } from '../tools/knowledge-check.mts';
+import { checkKnowledge, documentType, knowledgeDir, loadCatalogs } from '../tools/knowledge-check.mts';
 
 // Documents are only validated inside a cataloged knowledge tree, so every
 // fixture that expects validation ships this catalog.
@@ -434,4 +434,38 @@ test('an implemented spec anchored to an accepted decision stays valid', () => {
   }, (root) => {
     assert.deepEqual(checkKnowledge(root).errors, []);
   });
+});
+
+test('package.json kde.knowledge relocates the catalog the tools look for', () => {
+  const root = fixture({
+    'package.json': JSON.stringify({ kde: { knowledge: 'docs/knowledge/' } }),
+    'docs/knowledge/index.yaml': 'domains:\n  test:\n    path: docs/knowledge/test\n',
+    'docs/knowledge/test/decisions/index.yaml': 'current:\n  topic.example: DR-001\n',
+    'docs/knowledge/test/decisions/DR-001.md': frontmatter('DR-001', 'accepted'),
+    'knowledge/test/decisions/DR-002.md': 'not frontmatter: the default directory is not a knowledge tree any more',
+  });
+  try {
+    assert.equal(knowledgeDir(root), 'docs/knowledge');
+    assert.equal(loadCatalogs(root).length, 1);
+    const result = checkKnowledge(root);
+    assert.deepEqual(result.errors, []);
+    assert.equal(result.documents.length, 1);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('knowledgeDir falls back to knowledge/ and rejects directories the walker would never scan', () => {
+  const plain = fixture({ 'package.json': '{ "name": "x" }' });
+  const broken = fixture({ 'package.json': 'not json' });
+  const dotted = fixture({ 'package.json': JSON.stringify({ kde: { knowledge: '.agents/knowledge' } }) });
+  const escaped = fixture({ 'package.json': JSON.stringify({ kde: { knowledge: '../knowledge' } }) });
+  try {
+    assert.equal(knowledgeDir(plain), 'knowledge');
+    assert.equal(knowledgeDir(broken), 'knowledge');
+    assert.throws(() => knowledgeDir(dotted), /kde\.knowledge must be a relative directory/);
+    assert.throws(() => knowledgeDir(escaped), /kde\.knowledge must be a relative directory/);
+  } finally {
+    for (const root of [plain, broken, dotted, escaped]) rmSync(root, { recursive: true, force: true });
+  }
 });
