@@ -194,3 +194,55 @@ test('the installer downloads the release that matches its own version unless KD
     assert.match(text, new RegExp(`knowledge-driven-engineering/v${version.replace(/\./g, '\\.')}/install\\.sh`), `${doc} does not install from v${version}`);
   }
 });
+
+test('KDE_KNOWLEDGE_DIR relocates the knowledge tree and is remembered in package.json', () => {
+  const root = mkdtempSync(join(tmpdir(), 'kde-install-test-'));
+  try {
+    const out = execFileSync('bash', [join(repo, 'install.sh'), 'shop'], {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...process.env, KDE_SOURCE: repo, KDE_KNOWLEDGE_DIR: 'docs/knowledge/', npm_config_offline: 'true', npm_config_loglevel: 'silent' },
+    });
+    assert.match(out, /set {3}package\.json kde\.knowledge=docs\/knowledge/);
+    assert.equal(existsSync(join(root, 'knowledge')), false, 'the default directory is not created');
+    assert.equal(JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).kde.knowledge, 'docs/knowledge');
+    assert.match(readFileSync(join(root, 'docs/knowledge/index.yaml'), 'utf8'), /path: docs\/knowledge\/shop/);
+    assert.ok(existsSync(join(root, 'docs/knowledge/shop/decisions/index.yaml')));
+    assert.match(readFileSync(join(root, 'AGENTS.md'), 'utf8'), /lives under `docs\/knowledge\/`/);
+    assert.match(readFileSync(join(root, 'docs/knowledge/shop/README.md'), 'utf8'), /Read `docs\/knowledge\/index\.yaml`/);
+
+    // A later run without the variable reads the location back from package.json.
+    const again = install(root);
+    assert.match(again, /skip {2}docs\/knowledge\/index\.yaml/);
+    assert.equal(existsSync(join(root, 'knowledge')), false);
+
+    // A conflicting variable on an installed repository is refused, not applied.
+    const moved = execFileSync('bash', [join(repo, 'install.sh')], {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...process.env, KDE_SOURCE: repo, KDE_KNOWLEDGE_DIR: 'elsewhere', npm_config_offline: 'true', npm_config_loglevel: 'silent' },
+    });
+    assert.match(moved, /WARN {2}knowledge already lives under docs\/knowledge\//);
+    assert.equal(existsSync(join(root, 'elsewhere')), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('KDE_KNOWLEDGE_DIR rejects dot-directories, which the validator never scans', () => {
+  const root = mkdtempSync(join(tmpdir(), 'kde-install-test-'));
+  try {
+    assert.throws(
+      () => execFileSync('bash', [join(repo, 'install.sh'), 'shop'], {
+        cwd: root,
+        encoding: 'utf8',
+        stdio: 'pipe',
+        env: { ...process.env, KDE_SOURCE: repo, KDE_KNOWLEDGE_DIR: '.agents/knowledge', npm_config_offline: 'true', npm_config_loglevel: 'silent' },
+      }),
+      /KDE_KNOWLEDGE_DIR must be a relative directory/,
+    );
+    assert.equal(existsSync(join(root, '.agents')), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

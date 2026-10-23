@@ -485,3 +485,21 @@ test('accept: runs the acceptance fence and reports per command; promote --to im
     assert.throws(() => commandAccept(root, {}), /accept needs a <SPEC-ID>/);
   });
 });
+
+test('domain add and new follow package.json kde.knowledge when no --catalog is given', () => {
+  const root = mkdtempSync(join(tmpdir(), 'knowledge-cmd-test-'));
+  cpSync(join(repo, 'templates'), join(root, 'templates'), { recursive: true });
+  writeFileSync(join(root, 'package.json'), JSON.stringify({ kde: { knowledge: 'docs/knowledge' } }));
+  try {
+    const added = commandDomainAdd(root, 'checkout', { description: 'Checkout.' });
+    assert.ok(added.changed.includes('docs/knowledge/index.yaml'));
+    assert.equal(existsSync(join(root, 'knowledge')), false, 'nothing lands in the default directory');
+    assert.match(readFileSync(join(root, 'docs/knowledge/index.yaml'), 'utf8'), /path: docs\/knowledge\/checkout/);
+
+    const created = commandNew(root, 'decision', 'checkout', 'Carts expire', { by: 'human' });
+    assert.ok(created.changed.some((file) => file.startsWith('docs/knowledge/checkout/decisions/DR-001-')), created.changed.join(', '));
+    assert.deepEqual(checkKnowledge(root).errors, []);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

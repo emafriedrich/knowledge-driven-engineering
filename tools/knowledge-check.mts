@@ -148,8 +148,33 @@ export type Catalog = {
   domains: Map<string, CatalogDomain>;
 };
 
+// The directory that holds the root catalog, relative to the repository root.
+// Adopters rename or move it with `"kde": { "knowledge": "docs/knowledge" }` in
+// package.json; the default is `knowledge`. Domain paths inside the catalog are
+// already explicit, so this is the only path the tools assume.
+export function knowledgeDir(root = process.cwd()): string {
+  const file = join(root, 'package.json');
+  if (!existsSync(file)) return 'knowledge';
+  let configured: unknown;
+  try {
+    configured = (JSON.parse(readFileSync(file, 'utf8')) as { kde?: { knowledge?: unknown } }).kde?.knowledge;
+  } catch {
+    return 'knowledge';
+  }
+  if (typeof configured !== 'string' || !configured.trim()) return 'knowledge';
+  const dir = configured.trim().replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/+$/, '');
+  if (!dir || dir.startsWith('/') || dir.split('/').some((segment) => segment === '' || segment === '..' || segment.startsWith('.'))) {
+    throw new Error(`package.json kde.knowledge must be a relative directory inside the repository with no dot-segments, got ${JSON.stringify(configured)}`);
+  }
+  return dir;
+}
+
 function findCatalogFiles(root: string, files: string[]): string[] {
-  return files.filter((file) => relative(root, file).replace(/\\/g, '/').endsWith('knowledge/index.yaml'));
+  const suffix = `${knowledgeDir(root)}/index.yaml`;
+  return files.filter((file) => {
+    const rel = relative(root, file).replace(/\\/g, '/');
+    return rel === suffix || rel.endsWith(`/${suffix}`);
+  });
 }
 
 export function loadCatalogs(root = process.cwd()): Catalog[] {
@@ -262,8 +287,9 @@ export function checkKnowledge(root = process.cwd()): CheckResult {
   const knowledgeRoots = catalogs.map((catalog) => catalog.rootDir);
   const underKnowledgeRoot = (file: string): boolean => knowledgeRoots.some((dir) => file.startsWith(dir + '/'));
 
-  if (existsSync(join(root, 'knowledge')) && !existsSync(join(root, 'knowledge', 'index.yaml'))) {
-    warnings.push('knowledge/ exists but has no index.yaml catalog; its documents are not validated');
+  const dir = knowledgeDir(root);
+  if (existsSync(join(root, dir)) && !existsSync(join(root, dir, 'index.yaml'))) {
+    warnings.push(`${dir}/ exists but has no index.yaml catalog; its documents are not validated`);
   }
 
   const markdownFiles = files.filter(

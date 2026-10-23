@@ -22,7 +22,7 @@ import { pathToFileURL } from 'node:url';
 import { isMap, parse as parseYaml, parseDocument } from 'yaml';
 import type { Document } from 'yaml';
 
-import { checkKnowledge, documentType, loadCatalogs, values, type Catalog, type CatalogDomain } from './knowledge-check.mts';
+import { checkKnowledge, documentType, knowledgeDir, loadCatalogs, values, type Catalog, type CatalogDomain } from './knowledge-check.mts';
 import { generateManifests } from './knowledge-context.mts';
 
 type TypeSpec = { template: string; folder: string; prefix: string; active: string | null };
@@ -597,7 +597,7 @@ export function commandDomainAdd(
   if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) throw new CommandError(`domain name ${name} must be lowercase letters, digits and dashes`);
   if (!options.description?.trim()) throw new CommandError('domain add requires --description "<one line>"');
 
-  const catalogFile = join(root, options.catalog ?? 'knowledge/index.yaml');
+  const catalogFile = join(root, options.catalog ?? `${knowledgeDir(root)}/index.yaml`);
   const catalogDir = relative(root, dirname(catalogFile)).replace(/\\/g, '/');
   const domainPath = `${catalogDir}/${name}`;
   const changed: string[] = [];
@@ -969,7 +969,7 @@ const USAGE = `usage:
   knowledge new <type> <domain> "<title>" [--by human|agent] [--author <name>] [--prefix <P>]
   knowledge promote <ID> --by <human> [--topic <name>] [--to implemented]
   knowledge supersede <OLD-ID> --by <NEW-ID> [--approved-by <human>]   (promotes a draft NEW-ID)
-  knowledge domain add <name> --description "<text>" [--code-paths a/ b/] [--catalog knowledge/index.yaml]
+  knowledge domain add <name> --description "<text>" [--code-paths a/ b/] [--catalog <file>]
   knowledge backfill <domain>   (opens or resumes a backfill session; the audit itself is an agent's, see tools/backfill-protocol.md)
   knowledge renumber <OLD-ID> <NEW-ID>
   knowledge done <TASK-ID> [--by <name>]
