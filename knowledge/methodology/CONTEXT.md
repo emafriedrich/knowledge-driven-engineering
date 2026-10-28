@@ -49,6 +49,7 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 - `KDE-RFC-016` (draft, agent-drafted): External signals leave a mechanical trace: a draft must cite the ticket the work came from
 - `KDE-RFC-017` (draft, agent-drafted): Is the task artifact worth keeping when field use never wrote one
 - `KDE-RFC-018` (draft, agent-drafted): Decisions that span repositories: where a cross-service rule lives
+- `KDE-RFC-020` (draft, agent-drafted): Architecture documents: teams state their layout rules in their own words; KDE makes them verifiable
 
 ## Rules
 
