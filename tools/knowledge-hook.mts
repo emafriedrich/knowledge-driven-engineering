@@ -11,7 +11,20 @@ type HookInput = {
   tool_input?: { file_path?: string };
 };
 
-const KNOWLEDGE_PATH_PATTERN = /(^|[\\/])(knowledge|templates)([\\/]|$)|index\.yaml$/;
+// Mirrors knowledgeDir() in knowledge-check.mts without importing it, so the
+// hook stays cheap on the ordinary code edits that never reach the validator.
+function knowledgeDir(): string {
+  try {
+    const configured = (JSON.parse(readFileSync('package.json', 'utf8')) as { kde?: { knowledge?: unknown } }).kde?.knowledge;
+    if (typeof configured === 'string' && configured.trim()) return configured.trim().replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/+$/, '');
+  } catch {
+    // No package.json or not JSON: the default applies.
+  }
+  return 'knowledge';
+}
+
+const KNOWLEDGE_DIR = knowledgeDir();
+const KNOWLEDGE_PATH_PATTERN = new RegExp(`(^|[\\\\/])(${KNOWLEDGE_DIR.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}|templates)([\\\\/]|$)|index\\.yaml$`);
 
 let input: HookInput = {};
 try {
@@ -46,7 +59,7 @@ if (input.hook_event_name === 'Stop') {
 // paths while that domain's only specs are drafts gets one line, never a block.
 // Reads the root catalog directly so ordinary code edits stay cheap.
 async function warnIfImplementingAgainstDraft(filePath: string): Promise<void> {
-  const catalogFile = 'knowledge/index.yaml';
+  const catalogFile = `${KNOWLEDGE_DIR}/index.yaml`;
   if (!filePath || !existsSync(catalogFile)) return;
   const file = relative(process.cwd(), filePath).replace(/\\/g, '/');
   if (file.startsWith('..')) return;

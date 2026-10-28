@@ -43,6 +43,7 @@ Knowledge-Driven Engineering methodology rules, examples, and agent guidance.
 ## Pending — NOT current truth, do not obey
 
 - `DR-020` (draft, agent-drafted): promote --topic names the catalog anchor of a current document; the validator warns on an unanchored current spec
+- `DR-021` (draft, agent-drafted): The knowledge directory is configurable through package.json kde.knowledge; dot-directories are refused
 - `KDE-RFC-010` (draft, agent-drafted): Distribute framework tooling as an npm package
 - `KDE-RFC-015` (draft, agent-drafted): Re-anchor agents in-session: the hook returns the domain manifest on code edits
 - `KDE-RFC-016` (draft, agent-drafted): External signals leave a mechanical trace: a draft must cite the ticket the work came from

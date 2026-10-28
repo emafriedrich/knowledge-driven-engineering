@@ -178,7 +178,7 @@ Do not add `consumers` or `produces` in V1. They may help a generated graph late
 
 Use two small indexes:
 
-- Root domain catalog: `knowledge/index.yaml`
+- Root domain catalog: `knowledge/index.yaml` (the directory is configurable per repository through `kde.knowledge` in `package.json`; see [ADOPTING.md](ADOPTING.md))
 - Domain decision projection: `knowledge/<domain>/decisions/index.yaml`
 
 The root catalog lists domains and current anchor artifacts. The decision projection maps active decision topics to active Decision Record IDs.
